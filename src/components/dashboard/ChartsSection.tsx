@@ -37,19 +37,28 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
     .map(([date, count]) => ({ date, messages: count }))
     .slice(-14); // Last 14 days
 
-  // Process data for weekly meetings chart
-  const weeklyMeetings = data
-    .filter((item) => item.encerrado && item.ultimaAtividade)
-    .reduce((acc: any, item) => {
-      const week = `Semana ${getWeek(parseISO(item.ultimaAtividade!), { locale: ptBR })}`;
-      acc[week] = (acc[week] || 0) + 1;
-      return acc;
-    }, {});
+  // Process data for conversion rate chart
+  const conversionByWeek = data.reduce((acc: any, item) => {
+    if (!item.ultimaAtividade) return acc;
+    const week = `S${getWeek(parseISO(item.ultimaAtividade), { locale: ptBR })}`;
+    if (!acc[week]) {
+      acc[week] = { total: 0, converted: 0 };
+    }
+    acc[week].total += 1;
+    if (item.encerrado) {
+      acc[week].converted += 1;
+    }
+    return acc;
+  }, {});
 
-  const weeklyData = Object.entries(weeklyMeetings).map(([week, count]) => ({
-    week,
-    meetings: count,
-  }));
+  const conversionData = Object.entries(conversionByWeek)
+    .map(([week, data]: [string, any]) => ({
+      week,
+      taxa: ((data.converted / data.total) * 100).toFixed(1),
+      convertidos: data.converted,
+      total: data.total,
+    }))
+    .slice(-8); // Last 8 weeks
 
   // Process data for status pie chart
   const statusCounts = {
@@ -117,23 +126,27 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
 
       <Card>
         <CardHeader>
-          <CardTitle>Reuniões por Semana</CardTitle>
+          <CardTitle>Taxa de Conversão por Semana</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={weeklyData}>
+            <BarChart data={conversionData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="week" className="text-xs" />
-              <YAxis className="text-xs" />
+              <YAxis className="text-xs" unit="%" />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "var(--radius)",
                 }}
+                formatter={(value: any, name: string) => {
+                  if (name === "taxa") return [`${value}%`, "Taxa de Conversão"];
+                  return [value, name === "convertidos" ? "Convertidos" : "Total"];
+                }}
               />
               <Legend />
-              <Bar dataKey="meetings" name="Reuniões" fill="hsl(var(--chart-2))" radius={[8, 8, 0, 0]} />
+              <Bar dataKey="taxa" name="Taxa (%)" fill="hsl(var(--chart-2))" radius={[8, 8, 0, 0]} />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
