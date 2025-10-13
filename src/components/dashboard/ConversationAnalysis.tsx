@@ -133,7 +133,9 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           }
         });
 
-        return responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0;
+        const result = responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0;
+        console.log('Response time calculation:', { totalResponseTime, responseCount, result });
+        return result;
       } catch (error) {
         console.log('Error calculating response time:', error);
         return 0;
@@ -141,6 +143,17 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
     };
 
     const avgResponseTime = await calculateAvgResponseTime();
+    console.log('Final avgResponseTime:', avgResponseTime);
+
+    // Fallback: if no conversation history, use estimated time based on lead data
+    const finalAvgResponseTime = avgResponseTime > 0 ? avgResponseTime : 
+      data.length > 0 ? Math.round(data.reduce((acc, item) => {
+        if (!item.ultimaAtividade) return acc;
+        const created = new Date(item.created_at);
+        const lastActivity = new Date(item.ultimaAtividade);
+        const timeDiff = (lastActivity.getTime() - created.getTime()) / (1000 * 60); // minutes
+        return acc + timeDiff;
+      }, 0) / data.length) : 0;
 
     // Conversion rate
     const converted = data.filter(item => item.encerrado).length;
@@ -191,7 +204,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
     };
 
     setInsights({
-      avgResponseTime,
+      avgResponseTime: finalAvgResponseTime,
       conversionRate,
       avgMessagesPerLead,
       peakActivityHours,
