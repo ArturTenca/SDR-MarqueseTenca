@@ -53,10 +53,10 @@ export const DashboardHeader = () => {
           <div className="flex items-center gap-4">
             <a 
               href="/" 
-              className="transition-all duration-300 hover:shadow-lg hover:shadow-red-500/50 hover:bg-red-500/10 rounded-lg p-1"
+              className="transition-all duration-300 hover:shadow-lg hover:shadow-red-500/50 hover:bg-red-500/10 rounded-sm p-1"
               title="Voltar para visão geral"
             >
-              <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto rounded-lg" />
+              <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto rounded-sm" />
             </a>
             <Button
               variant="outline"
