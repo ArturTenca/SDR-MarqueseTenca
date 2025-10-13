@@ -198,20 +198,58 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
       }
     };
 
+    const calculatePeakActivityHours = async () => {
+      try {
+        // Fetch all chat histories with timestamps to calculate real peak hours
+        const { data: chatHistories, error } = await supabase
+          .from('n8n_chat_histories')
+          .select('timestamp')
+          .not('timestamp', 'is', null)
+          .order('timestamp', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching chat histories for peak hours:', error);
+          return [];
+        }
+
+        if (!chatHistories || chatHistories.length === 0) {
+          console.log('No chat histories found for peak hours calculation');
+          return [];
+        }
+
+        // Count messages per hour
+        const hourlyActivity: { [hour: number]: number } = {};
+        
+        chatHistories.forEach(chat => {
+          if (chat.timestamp) {
+            const hour = new Date(chat.timestamp).getHours();
+            hourlyActivity[hour] = (hourlyActivity[hour] || 0) + 1;
+          }
+        });
+
+        // Get top 3 peak hours
+        const peakHours = Object.entries(hourlyActivity)
+          .sort(([,a], [,b]) => b - a)
+          .slice(0, 3)
+          .map(([hour]) => parseInt(hour));
+
+        console.log('Peak activity hours calculation:', {
+          totalMessages: chatHistories.length,
+          hourlyActivity,
+          peakHours
+        });
+
+        return peakHours;
+      } catch (error) {
+        console.error('Error calculating peak activity hours:', error);
+        return [];
+      }
+    };
+
     const avgMessagesPerLead = await calculateAvgMessagesPerLead();
 
-    // Peak activity hours
-    const hourlyActivity = data.reduce((acc: any, item) => {
-      if (!item.ultimaAtividade) return acc;
-      const hour = new Date(item.ultimaAtividade).getHours();
-      acc[hour] = (acc[hour] || 0) + 1;
-      return acc;
-    }, {});
-
-    const peakActivityHours = Object.entries(hourlyActivity)
-      .sort(([,a], [,b]) => (b as number) - (a as number))
-      .slice(0, 3)
-      .map(([hour]) => parseInt(hour));
+    // Peak activity hours - calculate from real chat history
+    const peakActivityHours = await calculatePeakActivityHours();
 
     // Top keywords (removed - not needed)
     const topKeywords: { word: string; count: number }[] = [];
