@@ -13,54 +13,21 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   useEffect(() => {
     const checkAuth = () => {
-      const isLoggedIn = localStorage.getItem("isLoggedIn");
-      const loginTime = localStorage.getItem("loginTime");
-      const sessionToken = localStorage.getItem("sessionToken");
+      const isAuth = localStorage.getItem('isAuthenticated');
+      const userEmail = localStorage.getItem('userEmail');
+      const tokenData = localStorage.getItem('supabase.auth.token');
       
-      // Check if user is logged in
-      if (isLoggedIn !== "true") {
-        localStorage.clear();
-        navigate("/auth");
+      if (isAuth === 'true' && userEmail && tokenData) {
+        setIsAuthenticated(true);
+        setIsChecking(false);
         return;
       }
-
-      // Check session timeout (24 hours)
-      if (loginTime) {
-        const loginTimestamp = parseInt(loginTime);
-        const currentTime = Date.now();
-        const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-        
-        if (currentTime - loginTimestamp > sessionDuration) {
-          localStorage.clear();
-          navigate("/auth");
-          return;
-        }
-      } else {
-        localStorage.clear();
-        navigate("/auth");
-        return;
-      }
-
-      // Check session token
-      if (!sessionToken || sessionToken !== "mt_sdr_session_" + btoa("marques_tenca_2024")) {
-        localStorage.clear();
-        navigate("/auth");
-        return;
-      }
-
-      // Additional security checks
-      const userAgent = localStorage.getItem("userAgent");
-      if (userAgent && userAgent !== navigator.userAgent) {
-        localStorage.clear();
-        navigate("/auth");
-        return;
-      }
-
-      setIsAuthenticated(true);
-      setIsChecking(false);
+      navigate("/auth");
     };
 
-    checkAuth();
+    // Add a small delay to allow localStorage to be set
+    const timer = setTimeout(checkAuth, 100);
+    return () => clearTimeout(timer);
   }, [navigate]);
 
   if (isChecking) {

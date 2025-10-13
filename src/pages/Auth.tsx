@@ -15,23 +15,11 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already authenticated with Supabase
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/");
-      }
-    };
-    checkSession();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        navigate("/");
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    // Check if user is already authenticated
+    const isAuth = localStorage.getItem('isAuthenticated');
+    if (isAuth === 'true') {
+      navigate("/");
+    }
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -50,11 +38,26 @@ const Auth = () => {
       }
 
       if (data.session) {
+        // Store authentication data
+        localStorage.setItem('isAuthenticated', 'true');
+        localStorage.setItem('userEmail', data.session.user.email);
+        localStorage.setItem('supabase.auth.token', JSON.stringify({
+          access_token: data.session.access_token,
+          refresh_token: data.session.refresh_token,
+          expires_at: data.session.expires_at,
+          user: data.session.user,
+          token_type: data.session.token_type
+        }));
+        
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o dashboard...",
         });
-        // Navigation will be handled by onAuthStateChange
+        
+        // Navigate immediately
+        navigate("/");
+      } else {
+        throw new Error('Sessão não criada');
       }
     } catch (error: any) {
       toast({

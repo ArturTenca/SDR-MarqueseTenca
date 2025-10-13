@@ -18,31 +18,21 @@ const Index = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check authentication using Supabase Auth
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    // Add a small delay to allow localStorage to be set
+    const timer = setTimeout(() => {
+      const isAuth = localStorage.getItem('isAuthenticated');
+      const userEmail = localStorage.getItem('userEmail');
+      const tokenData = localStorage.getItem('supabase.auth.token');
       
-      if (!session) {
-        navigate("/auth");
+      if (isAuth === 'true' && userEmail && tokenData) {
+        setIsAuthenticated(true);
+        setLoading(false);
         return;
       }
+      navigate("/auth");
+    }, 100);
 
-      setIsAuthenticated(true);
-    };
-
-    checkAuth();
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_OUT' || !session) {
-        setIsAuthenticated(false);
-        navigate("/auth");
-      } else if (event === 'SIGNED_IN') {
-        setIsAuthenticated(true);
-      }
-    });
-
-    return () => subscription.unsubscribe();
+    return () => clearTimeout(timer);
   }, [navigate]);
 
   const fetchData = async () => {

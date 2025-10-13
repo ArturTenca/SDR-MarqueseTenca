@@ -18,8 +18,14 @@ export const DashboardHeader = () => {
       const { error } = await supabase.auth.signOut();
       
       if (error) {
-        throw error;
+        console.log('Erro no logout do Supabase:', error);
+        // Continue anyway to clear localStorage
       }
+      
+      // Clear all localStorage data
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userEmail');
       
       toast({
         title: "Logout realizado",
@@ -27,11 +33,16 @@ export const DashboardHeader = () => {
       });
       navigate("/auth");
     } catch (error: any) {
+      // Clear localStorage even if there's an error
+      localStorage.removeItem('supabase.auth.token');
+      localStorage.removeItem('isAuthenticated');
+      localStorage.removeItem('userEmail');
+      
       toast({
-        title: "Erro ao fazer logout",
-        description: error.message,
-        variant: "destructive",
+        title: "Logout realizado",
+        description: "Você foi desconectado com sucesso.",
       });
+      navigate("/auth");
     }
   };
 
