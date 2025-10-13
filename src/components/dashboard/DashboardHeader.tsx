@@ -14,9 +14,12 @@ export const DashboardHeader = () => {
 
   const handleLogout = async () => {
     try {
-      // Clear all security tokens
-      localStorage.clear();
-      sessionStorage.clear();
+      // Sign out using Supabase Auth
+      const { error } = await supabase.auth.signOut();
+      
+      if (error) {
+        throw error;
+      }
       
       toast({
         title: "Logout realizado",

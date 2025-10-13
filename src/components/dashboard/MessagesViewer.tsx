@@ -46,7 +46,7 @@ export const MessagesViewer = ({ data, loading }: MessagesViewerProps) => {
         .order('id', { ascending: true });
 
       if (error) {
-        console.log('Error fetching chat history:', error);
+        // Error fetching chat history
         setMessageHistory([]);
       } else if (chatHistory && chatHistory.length > 0) {
         // Process real chat history
@@ -64,7 +64,7 @@ export const MessagesViewer = ({ data, loading }: MessagesViewerProps) => {
         setMessageHistory([]);
       }
     } catch (error) {
-      console.error('Error fetching conversation history:', error);
+      // Error fetching conversation history
       setMessageHistory([]);
     } finally {
       setLoadingHistory(false);

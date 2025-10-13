@@ -18,39 +18,11 @@ const Index = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check authentication with multiple layers of security
-    const checkAuth = () => {
-      const isLoggedIn = localStorage.getItem("isLoggedIn");
-      const loginTime = localStorage.getItem("loginTime");
-      const sessionToken = localStorage.getItem("sessionToken");
+    // Check authentication using Supabase Auth
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
       
-      // Check if user is logged in
-      if (isLoggedIn !== "true") {
-        localStorage.clear();
-        navigate("/auth");
-        return;
-      }
-
-      // Check session timeout (24 hours)
-      if (loginTime) {
-        const loginTimestamp = parseInt(loginTime);
-        const currentTime = Date.now();
-        const sessionDuration = 24 * 60 * 60 * 1000; // 24 hours in milliseconds
-        
-        if (currentTime - loginTimestamp > sessionDuration) {
-          localStorage.clear();
-          navigate("/auth");
-          return;
-        }
-      } else {
-        localStorage.clear();
-        navigate("/auth");
-        return;
-      }
-
-      // Check session token
-      if (!sessionToken || sessionToken !== "mt_sdr_session_" + btoa("marques_tenca_2024")) {
-        localStorage.clear();
+      if (!session) {
         navigate("/auth");
         return;
       }
@@ -59,6 +31,18 @@ const Index = () => {
     };
 
     checkAuth();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_OUT' || !session) {
+        setIsAuthenticated(false);
+        navigate("/auth");
+      } else if (event === 'SIGNED_IN') {
+        setIsAuthenticated(true);
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const fetchData = async () => {

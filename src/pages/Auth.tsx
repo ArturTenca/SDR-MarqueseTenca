@@ -8,18 +8,30 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
-  const [username, setUsername] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in (simple localStorage check)
-    const isLoggedIn = localStorage.getItem("isLoggedIn");
-    if (isLoggedIn === "true") {
-      navigate("/");
-    }
+    // Check if user is already authenticated with Supabase
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/");
+      }
+    };
+    checkSession();
+
+    // Listen for auth state changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' && session) {
+        navigate("/");
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -27,37 +39,27 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Enhanced authentication with multiple checks
-      const validCredentials = [
-        { username: "admin", password: "1234" },
-        { username: "marques", password: "tenca2024" },
-        { username: "sdr", password: "mt2024" }
-      ];
+      // Use Supabase Auth for secure authentication
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
 
-      const isValidUser = validCredentials.some(
-        cred => cred.username === username && cred.password === password
-      );
+      if (error) {
+        throw error;
+      }
 
-      if (isValidUser) {
-        // Set multiple security tokens
-        localStorage.setItem("isLoggedIn", "true");
-        localStorage.setItem("loginTime", Date.now().toString());
-        localStorage.setItem("sessionToken", "mt_sdr_session_" + btoa("marques_tenca_2024"));
-        localStorage.setItem("userAgent", navigator.userAgent);
-        localStorage.setItem("loginIP", "local"); // In production, get real IP
-        
+      if (data.session) {
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o dashboard...",
         });
-        navigate("/");
-      } else {
-        throw new Error("Usuário ou senha incorretos.");
+        // Navigation will be handled by onAuthStateChange
       }
     } catch (error: any) {
       toast({
         title: "Erro ao fazer login",
-        description: error.message,
+        description: error.message || "Credenciais inválidas",
         variant: "destructive",
       });
     } finally {
@@ -84,15 +86,16 @@ const Auth = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="username">Usuário</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                type="text"
-                placeholder="admin"
-                value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                id="email"
+                type="email"
+                placeholder="seu@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                 required
                 disabled={loading}
+                autoComplete="email"
               />
             </div>
             <div className="space-y-2">
@@ -104,6 +107,7 @@ const Auth = () => {
                 onChange={(e) => setPassword(e.target.value)}
                 required
                 disabled={loading}
+                autoComplete="current-password"
               />
             </div>
             <Button type="submit" className="w-full" disabled={loading}>

@@ -26,6 +26,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
+import { maskPhoneNumber, formatMaskedPhone } from "@/lib/phone-utils";
 
 interface LeadsTableProps {
   data: FollowupData[];
@@ -54,8 +55,9 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
 
   const getLeadNumber = (remotejID: string | null) => {
     if (!remotejID) return "-";
-    // Remove all WhatsApp suffixes and return only the number
-    return remotejID.replace(/@.*$/, "");
+    // Remove all WhatsApp suffixes and mask the number for privacy
+    const cleanNumber = remotejID.replace(/@.*$/, "");
+    return formatMaskedPhone(cleanNumber);
   };
 
   const getStatusBadge = (item: FollowupData) => {

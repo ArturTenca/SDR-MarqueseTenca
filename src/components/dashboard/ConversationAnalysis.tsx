@@ -72,7 +72,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           calculateInsightsFromData();
         }
       } catch (error) {
-        console.error('Error fetching analysis data:', error);
+        // Error fetching analysis data - fallback to calculated insights
         calculateInsightsFromData();
       }
     };
@@ -192,7 +192,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         });
       }
     } catch (error) {
-      console.error('Error fetching conversation history:', error);
+      // Error fetching conversation history
       toast({
         title: "Erro ao carregar histórico",
         description: "Não foi possível carregar o histórico da conversa.",
@@ -229,9 +229,9 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         throw error;
       }
 
-      console.log('Analysis data saved successfully');
+      // Analysis data saved successfully
     } catch (error) {
-      console.error('Error saving analysis data:', error);
+      // Error saving analysis data - silent fail
     }
   };
 
