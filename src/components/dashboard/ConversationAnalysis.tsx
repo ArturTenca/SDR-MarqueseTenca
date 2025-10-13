@@ -59,7 +59,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         if (analysis) {
           setAnalysisData(analysis);
           setInsights({
-            avgResponseTime: analysis.avg_response_time_hours || 0,
+            avgResponseTime: (analysis.avg_response_time_hours || 0) * 60, // Convert hours to minutes
             conversionRate: analysis.conversion_rate || 0,
             avgMessagesPerLead: analysis.avg_messages_per_lead || 0,
             peakActivityHours: analysis.peak_activity_hours || [],
@@ -83,12 +83,12 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
   const calculateInsightsFromData = () => {
     if (data.length === 0) return;
 
-    // Average response time
+    // Average response time in minutes
     const responseTimes = data.map(item => {
       if (!item.ultimaAtividade) return 0;
       const created = new Date(item.created_at);
       const lastActivity = new Date(item.ultimaAtividade);
-      return differenceInHours(lastActivity, created);
+      return differenceInHours(lastActivity, created) * 60; // Convert to minutes
     }).filter(time => time > 0);
 
     const avgResponseTime = responseTimes.length > 0 
@@ -208,7 +208,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
     try {
       const analysisData = {
         remotejID: 'global_analysis',
-        avg_response_time_hours: insights.avgResponseTime,
+        avg_response_time_hours: insights.avgResponseTime / 60, // Convert minutes to hours for storage
         conversion_rate: insights.conversionRate,
         avg_messages_per_lead: insights.avgMessagesPerLead,
         peak_activity_hours: insights.peakActivityHours,
@@ -282,9 +282,9 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {insights ? `${insights.avgResponseTime.toFixed(1)}h` : '0h'}
+              {insights ? `${insights.avgResponseTime.toFixed(0)}min` : '0min'}
             </div>
-            <p className="text-xs text-muted-foreground">Horas</p>
+            <p className="text-xs text-muted-foreground">Minutos</p>
           </CardContent>
         </Card>
 
