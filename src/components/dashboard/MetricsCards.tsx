@@ -68,7 +68,7 @@ export const MetricsCards = ({ data, loading }: MetricsCardsProps) => {
       {metrics.map((metric) => {
         const Icon = metric.icon;
         return (
-          <Card key={metric.title} className="transition-all hover:shadow-lg">
+          <Card key={metric.title} className="transition-all duration-300 hover:shadow-lg hover:scale-105 hover:bg-accent/5 hover:shadow-primary/20 hover:shadow-2xl hover:ring-2 hover:ring-primary/30">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <CardTitle className="text-sm font-medium text-muted-foreground">
                 {metric.title}

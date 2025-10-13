@@ -19,29 +19,10 @@ const Index = () => {
 
   useEffect(() => {
     // Check authentication
-    const checkAuth = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+    const checkAuth = () => {
+      const isLoggedIn = localStorage.getItem("isLoggedIn");
       
-      if (!session) {
-        navigate("/auth");
-        return;
-      }
-
-      // Check if user has admin role
-      const { data: roles } = await supabase
-        .from("user_roles")
-        .select("role")
-        .eq("user_id", session.user.id)
-        .eq("role", "admin")
-        .single();
-
-      if (!roles) {
-        toast({
-          title: "Acesso negado",
-          description: "Você não tem permissão de administrador.",
-          variant: "destructive",
-        });
-        await supabase.auth.signOut();
+      if (isLoggedIn !== "true") {
         navigate("/auth");
         return;
       }
@@ -50,18 +31,7 @@ const Index = () => {
     };
 
     checkAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        if (event === "SIGNED_OUT" || !session) {
-          navigate("/auth");
-        }
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [navigate, toast]);
+  }, [navigate]);
 
   const fetchData = async () => {
     try {

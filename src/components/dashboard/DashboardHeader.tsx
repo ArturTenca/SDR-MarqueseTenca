@@ -5,7 +5,7 @@ import { Moon, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import mtLogo from "@/assets/mt-logo.png";
+import mtLogo from "@/assets/mt-logo.svg";
 
 export const DashboardHeader = () => {
   const { theme, setTheme } = useTheme();
@@ -14,7 +14,7 @@ export const DashboardHeader = () => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      localStorage.removeItem("isLoggedIn");
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso.",
@@ -48,11 +48,12 @@ export const DashboardHeader = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto" />
+            <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto transition-all duration-300 hover:scale-110 hover:rotate-3" />
             <Button
               variant="outline"
               size="icon"
               onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="transition-all duration-200 hover:scale-110 hover:shadow-md"
             >
               <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
               <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
@@ -61,7 +62,7 @@ export const DashboardHeader = () => {
               variant="outline"
               size="sm"
               onClick={handleLogout}
-              className="gap-2"
+              className="gap-2 transition-all duration-200 hover:scale-105 hover:shadow-md"
             >
               <LogOut className="w-4 h-4" />
               Sair

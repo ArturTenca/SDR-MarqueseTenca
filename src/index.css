@@ -127,3 +127,25 @@ All colors MUST be HSL.
     @apply bg-background text-foreground;
   }
 }
+
+@layer components {
+  .no-hover-effect:hover {
+    fill: hsl(var(--chart-2)) !important;
+    fill-opacity: 1 !important;
+  }
+  
+  .no-hover-effect:hover rect {
+    fill: hsl(var(--chart-2)) !important;
+    fill-opacity: 1 !important;
+  }
+  
+  .no-hover-effect:hover path {
+    fill: hsl(var(--chart-2)) !important;
+    fill-opacity: 1 !important;
+  }
+  
+  .no-hover-effect:hover * {
+    fill: hsl(var(--chart-2)) !important;
+    fill-opacity: 1 !important;
+  }
+}

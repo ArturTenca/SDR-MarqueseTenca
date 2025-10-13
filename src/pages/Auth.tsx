@@ -8,21 +8,18 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 
 const Auth = () => {
-  const [email, setEmail] = useState("");
+  const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const checkUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/");
-      }
-    };
-    checkUser();
+    // Check if user is already logged in (simple localStorage check)
+    const isLoggedIn = localStorage.getItem("isLoggedIn");
+    if (isLoggedIn === "true") {
+      navigate("/");
+    }
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -30,34 +27,17 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const { data, error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-
-      if (error) throw error;
-
-      // Check if user has admin role
-      if (data.user) {
-        const { data: roles } = await supabase
-          .from("user_roles")
-          .select("role")
-          .eq("user_id", data.user.id)
-          .eq("role", "admin")
-          .single();
-
-        if (!roles) {
-          await supabase.auth.signOut();
-          throw new Error("Acesso negado. Você não tem permissão de administrador.");
-        }
+      // Simple authentication check
+      if (username === "admin" && password === "1234") {
+        localStorage.setItem("isLoggedIn", "true");
+        toast({
+          title: "Login realizado com sucesso!",
+          description: "Redirecionando para o dashboard...",
+        });
+        navigate("/");
+      } else {
+        throw new Error("Usuário ou senha incorretos.");
       }
-
-      toast({
-        title: "Login realizado com sucesso!",
-        description: "Redirecionando para o dashboard...",
-      });
-
-      navigate("/");
     } catch (error: any) {
       toast({
         title: "Erro ao fazer login",
@@ -75,9 +55,9 @@ const Auth = () => {
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <img 
-              src="/src/assets/mt-logo.png" 
+              src="/src/assets/mt-logo.svg" 
               alt="Marques e Tenca" 
-              className="h-16 object-contain"
+              className="h-16 w-auto object-contain"
             />
           </div>
           <CardTitle className="text-2xl text-center">Painel SDR MT</CardTitle>
@@ -88,13 +68,13 @@ const Auth = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
+              <Label htmlFor="username">Usuário</Label>
               <Input
-                id="email"
-                type="email"
-                placeholder="admin@mt.com"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                id="username"
+                type="text"
+                placeholder="admin"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
                 required
                 disabled={loading}
               />

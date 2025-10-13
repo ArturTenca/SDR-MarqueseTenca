@@ -1,4 +1,6 @@
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { FollowupData } from "@/types/followup";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -16,7 +18,7 @@ import {
   Legend,
   ResponsiveContainer,
 } from "recharts";
-import { format, parseISO, startOfWeek, getWeek } from "date-fns";
+import { format, parseISO, startOfWeek, getWeek, subDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 interface ChartsSectionProps {
@@ -25,6 +27,8 @@ interface ChartsSectionProps {
 }
 
 export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
+  const [selectedPeriod, setSelectedPeriod] = useState<7 | 30 | 90>(7);
+
   // Process data for daily messages chart
   const dailyMessages = data.reduce((acc: any, item) => {
     if (!item.ultimaAtividade) return acc;
@@ -35,12 +39,19 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
 
   const dailyData = Object.entries(dailyMessages)
     .map(([date, count]) => ({ date, messages: count }))
-    .slice(-14); // Last 14 days
+    .sort((a, b) => {
+      // Sort by date to ensure chronological order
+      const dateA = new Date(a.date.split('/').reverse().join('-'));
+      const dateB = new Date(b.date.split('/').reverse().join('-'));
+      return dateA.getTime() - dateB.getTime();
+    })
+    .slice(-selectedPeriod); // Dynamic period
 
   // Process data for conversion rate chart
   const conversionByWeek = data.reduce((acc: any, item) => {
     if (!item.ultimaAtividade) return acc;
-    const week = `S${getWeek(parseISO(item.ultimaAtividade), { locale: ptBR })}`;
+    const date = parseISO(item.ultimaAtividade);
+    const week = format(date, "w/MMM", { locale: ptBR });
     if (!acc[week]) {
       acc[week] = { total: 0, converted: 0 };
     }
@@ -58,6 +69,12 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
       convertidos: data.converted,
       total: data.total,
     }))
+    .sort((a, b) => {
+      // Sort by week chronologically
+      const dateA = new Date(a.week.split('/').reverse().join('-'));
+      const dateB = new Date(b.week.split('/').reverse().join('-'));
+      return dateA.getTime() - dateB.getTime();
+    })
     .slice(-8); // Last 8 weeks
 
   // Process data for status pie chart
@@ -93,21 +110,53 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
 
   return (
     <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-      <Card className="lg:col-span-2">
+      <Card className="lg:col-span-2 transition-all duration-300 hover:shadow-lg hover:scale-[1.005]">
         <CardHeader>
-          <CardTitle>Evolução Diária de Mensagens</CardTitle>
+          <div className="flex items-center justify-between">
+            <CardTitle>Evolução Diária de Mensagens</CardTitle>
+            <div className="flex gap-2">
+              <Button
+                variant={selectedPeriod === 7 ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedPeriod(7)}
+              >
+                7 dias
+              </Button>
+              <Button
+                variant={selectedPeriod === 30 ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedPeriod(30)}
+              >
+                30 dias
+              </Button>
+              <Button
+                variant={selectedPeriod === 90 ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedPeriod(90)}
+              >
+                90 dias
+              </Button>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
             <LineChart data={dailyData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="date" className="text-xs" />
-              <YAxis className="text-xs" />
+              <YAxis className="text-xs" domain={[0, 'dataMax']} />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
+                  backgroundColor: "rgba(0, 0, 0, 0.8)",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "var(--radius)",
+                  color: "white",
+                }}
+                labelStyle={{
+                  color: "white",
+                }}
+                itemStyle={{
+                  color: "white",
                 }}
               />
               <Legend />
@@ -124,13 +173,18 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="transition-all duration-300 hover:shadow-lg hover:scale-[1.005]">
         <CardHeader>
           <CardTitle>Taxa de Conversão por Semana</CardTitle>
         </CardHeader>
         <CardContent>
           <ResponsiveContainer width="100%" height={300}>
-            <BarChart data={conversionData}>
+            <BarChart 
+              data={conversionData} 
+              margin={{ top: 5, right: 30, left: 20, bottom: 5 }}
+              onMouseEnter={() => {}}
+              onMouseLeave={() => {}}
+            >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="week" className="text-xs" />
               <YAxis className="text-xs" unit="%" />
@@ -139,6 +193,7 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
                   backgroundColor: "hsl(var(--card))",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "var(--radius)",
+                  color: "hsl(var(--card-foreground))",
                 }}
                 formatter={(value: any, name: string) => {
                   if (name === "taxa") return [`${value}%`, "Taxa de Conversão"];
@@ -146,13 +201,25 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
                 }}
               />
               <Legend />
-              <Bar dataKey="taxa" name="Taxa (%)" fill="hsl(var(--chart-2))" radius={[8, 8, 0, 0]} />
+              <Bar 
+                dataKey="taxa" 
+                name="Taxa (%)" 
+                fill="hsl(var(--chart-2))" 
+                radius={[8, 8, 0, 0]}
+                style={{ cursor: 'default' }}
+                isAnimationActive={false}
+                onMouseEnter={() => {}}
+                onMouseLeave={() => {}}
+                className="no-hover-effect"
+                fillOpacity={1}
+                stroke="none"
+              />
             </BarChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      <Card>
+      <Card className="transition-all duration-300 hover:shadow-lg hover:scale-[1.005]">
         <CardHeader>
           <CardTitle>Distribuição de Status</CardTitle>
         </CardHeader>
@@ -175,9 +242,16 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
               </Pie>
               <Tooltip
                 contentStyle={{
-                  backgroundColor: "hsl(var(--card))",
+                  backgroundColor: "rgba(0, 0, 0, 0.8)",
                   border: "1px solid hsl(var(--border))",
                   borderRadius: "var(--radius)",
+                  color: "white",
+                }}
+                labelStyle={{
+                  color: "white",
+                }}
+                itemStyle={{
+                  color: "white",
                 }}
               />
             </PieChart>

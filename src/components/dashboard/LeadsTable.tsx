@@ -36,6 +36,12 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
   const [statusFilter, setStatusFilter] = useState("all");
   const { toast } = useToast();
 
+  const getLeadNumber = (remotejID: string | null) => {
+    if (!remotejID) return "-";
+    // Remove all WhatsApp suffixes and return only the number
+    return remotejID.replace(/@.*$/, "");
+  };
+
   const getStatusBadge = (item: FollowupData) => {
     if (item.encerrado) {
       return <Badge className="bg-success text-success-foreground">Encerrado</Badge>;
@@ -50,7 +56,8 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
   };
 
   const filteredData = data.filter((item) => {
-    const matchesSearch = item.remotejID?.toLowerCase().includes(search.toLowerCase());
+    const leadNumber = getLeadNumber(item.remotejID);
+    const matchesSearch = leadNumber.toLowerCase().includes(search.toLowerCase());
     const matchesStatus =
       statusFilter === "all" ||
       (statusFilter === "encerrado" && item.encerrado) ||
@@ -61,10 +68,10 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
   });
 
   const exportToCSV = () => {
-    const headers = ["ID", "Lead", "Última Atividade", "Status", "Encerrado"];
+    const headers = ["ID", "Número do Lead", "Última Atividade", "Status", "Encerrado"];
     const csvData = filteredData.map((item) => [
       item.id,
-      item.remotejID || "-",
+      getLeadNumber(item.remotejID),
       item.ultimaAtividade ? format(parseISO(item.ultimaAtividade), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "-",
       item.followup2 ? "Follow-up 2" : item.followup1 ? "Follow-up 1" : "Em Andamento",
       item.encerrado ? "Sim" : "Não",
@@ -98,16 +105,16 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
   }
 
   return (
-    <Card>
+    <Card className="transition-all duration-300 hover:shadow-lg hover:scale-[1.005]">
       <CardHeader>
         <div className="flex items-center justify-between">
           <CardTitle>Tabela de Leads</CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onRefresh}>
+            <Button variant="outline" size="sm" onClick={onRefresh} className="transition-all duration-200 hover:scale-105 hover:shadow-md">
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
             </Button>
-            <Button variant="outline" size="sm" onClick={exportToCSV}>
+            <Button variant="outline" size="sm" onClick={exportToCSV} className="transition-all duration-200 hover:scale-105 hover:shadow-md">
               <Download className="h-4 w-4 mr-2" />
               Exportar CSV
             </Button>
@@ -119,7 +126,7 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
           <div className="flex-1 relative">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Buscar por ID do lead..."
+              placeholder="Buscar por número do lead..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="pl-9"
@@ -139,11 +146,11 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
           </Select>
         </div>
 
-        <div className="rounded-md border">
+        <div className="rounded-md border overflow-hidden">
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>ID Lead</TableHead>
+                <TableHead>Número do Lead</TableHead>
                 <TableHead>Última Atividade</TableHead>
                 <TableHead>Última Mensagem</TableHead>
                 <TableHead>Status</TableHead>
@@ -158,8 +165,8 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
                 </TableRow>
               ) : (
                 filteredData.map((item) => (
-                  <TableRow key={item.id}>
-                    <TableCell className="font-medium">{item.remotejID || "-"}</TableCell>
+                  <TableRow key={item.id} className="transition-all duration-200 hover:bg-accent/10">
+                    <TableCell className="font-medium">{getLeadNumber(item.remotejID)}</TableCell>
                     <TableCell>
                       {item.ultimaAtividade
                         ? format(parseISO(item.ultimaAtividade), "dd/MM/yyyy HH:mm", { locale: ptBR })
