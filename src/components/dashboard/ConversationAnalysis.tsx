@@ -157,8 +157,48 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
     const converted = data.filter(item => item.encerrado).length;
     const conversionRate = (converted / data.length) * 100;
 
-    // Average messages per lead (estimated)
-    const avgMessagesPerLead = Math.round(data.length * 3.2);
+    // Calculate average messages per lead from real chat histories
+    const calculateAvgMessagesPerLead = async () => {
+      try {
+        // Get all chat histories grouped by session_id
+        const { data: allHistories, error } = await supabase
+          .from('n8n_chat_histories')
+          .select('session_id');
+
+        if (error || !allHistories) {
+          return 0;
+        }
+
+        // Count messages per session_id
+        const messageCounts = allHistories.reduce((acc: any, history) => {
+          const sessionId = history.session_id;
+          acc[sessionId] = (acc[sessionId] || 0) + 1;
+          return acc;
+        }, {});
+
+        // Calculate average
+        const sessionIds = Object.keys(messageCounts);
+        if (sessionIds.length === 0) {
+          return 0;
+        }
+
+        const totalMessages = Object.values(messageCounts).reduce((sum: number, count: any) => sum + count, 0);
+        const avgMessages = totalMessages / sessionIds.length;
+
+        console.log('Messages per lead calculation:', { 
+          totalSessions: sessionIds.length, 
+          totalMessages, 
+          avgMessages: Math.round(avgMessages) 
+        });
+
+        return Math.round(avgMessages);
+      } catch (error) {
+        console.log('Error calculating messages per lead:', error);
+        return 0;
+      }
+    };
+
+    const avgMessagesPerLead = await calculateAvgMessagesPerLead();
 
     // Peak activity hours
     const hourlyActivity = data.reduce((acc: any, item) => {
