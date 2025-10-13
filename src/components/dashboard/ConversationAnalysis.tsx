@@ -160,12 +160,21 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
     // Calculate average messages per lead from real chat histories
     const calculateAvgMessagesPerLead = async () => {
       try {
+        console.log('🔍 Starting messages per lead calculation...');
+        
         // Get all chat histories grouped by session_id
         const { data: allHistories, error } = await supabase
           .from('n8n_chat_histories')
           .select('session_id');
 
+        console.log('📊 Messages per lead query result:', { 
+          data: allHistories, 
+          error, 
+          count: allHistories?.length || 0 
+        });
+
         if (error || !allHistories) {
+          console.log('❌ Error or no data for messages per lead calculation');
           return 0;
         }
 
@@ -179,51 +188,78 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         // Calculate average
         const sessionIds = Object.keys(messageCounts);
         if (sessionIds.length === 0) {
+          console.log('⚠️ No session IDs found for messages per lead calculation');
           return 0;
         }
 
         const totalMessages = Object.values(messageCounts).reduce((sum: number, count: any) => sum + count, 0);
         const avgMessages = totalMessages / sessionIds.length;
 
-        console.log('Messages per lead calculation:', { 
+        console.log('🎯 Messages per lead calculation result:', { 
           totalSessions: sessionIds.length, 
           totalMessages, 
-          avgMessages: Math.round(avgMessages) 
+          avgMessages: Math.round(avgMessages),
+          messageCounts: Object.keys(messageCounts).length > 0 ? messageCounts : 'empty'
         });
 
         return Math.round(avgMessages);
       } catch (error) {
-        console.log('Error calculating messages per lead:', error);
+        console.log('💥 Error calculating messages per lead:', error);
         return 0;
       }
     };
 
     const calculatePeakActivityHours = async () => {
       try {
+        console.log('🔍 Starting peak activity hours calculation...');
+        
         // Fetch all chat histories with timestamps to calculate real peak hours
         const { data: chatHistories, error } = await supabase
           .from('n8n_chat_histories')
-          .select('timestamp')
-          .not('timestamp', 'is', null)
-          .order('timestamp', { ascending: true });
+          .select('timestamp, created_at')
+          .order('created_at', { ascending: true });
+
+        console.log('📊 Chat histories query result:', { 
+          data: chatHistories, 
+          error, 
+          count: chatHistories?.length || 0 
+        });
 
         if (error) {
-          console.error('Error fetching chat histories for peak hours:', error);
+          console.error('❌ Error fetching chat histories for peak hours:', error);
           return [];
         }
 
         if (!chatHistories || chatHistories.length === 0) {
-          console.log('No chat histories found for peak hours calculation');
+          console.log('⚠️ No chat histories found for peak hours calculation');
           return [];
         }
 
-        // Count messages per hour
+        // Count messages per hour using both timestamp and created_at
         const hourlyActivity: { [hour: number]: number } = {};
         
-        chatHistories.forEach(chat => {
+        chatHistories.forEach((chat, index) => {
+          let dateToUse = null;
+          
+          // Try to use timestamp first, then created_at as fallback
           if (chat.timestamp) {
-            const hour = new Date(chat.timestamp).getHours();
+            dateToUse = new Date(chat.timestamp);
+          } else if (chat.created_at) {
+            dateToUse = new Date(chat.created_at);
+          }
+          
+          if (dateToUse && !isNaN(dateToUse.getTime())) {
+            const hour = dateToUse.getHours();
             hourlyActivity[hour] = (hourlyActivity[hour] || 0) + 1;
+          }
+          
+          // Log first few items for debugging
+          if (index < 3) {
+            console.log(`📝 Message ${index + 1}:`, {
+              timestamp: chat.timestamp,
+              created_at: chat.created_at,
+              parsedHour: dateToUse ? dateToUse.getHours() : 'invalid'
+            });
           }
         });
 
@@ -233,15 +269,16 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           .slice(0, 3)
           .map(([hour]) => parseInt(hour));
 
-        console.log('Peak activity hours calculation:', {
+        console.log('🎯 Peak activity hours calculation result:', {
           totalMessages: chatHistories.length,
           hourlyActivity,
-          peakHours
+          peakHours,
+          hasData: peakHours.length > 0
         });
 
         return peakHours;
       } catch (error) {
-        console.error('Error calculating peak activity hours:', error);
+        console.error('💥 Error calculating peak activity hours:', error);
         return [];
       }
     };
