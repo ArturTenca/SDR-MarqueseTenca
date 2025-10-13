@@ -16,7 +16,7 @@ import {
   BarChart3,
   Activity
 } from "lucide-react";
-import { format, parseISO, differenceInHours, differenceInDays } from "date-fns";
+import { format, parseISO, differenceInHours } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   Dialog,

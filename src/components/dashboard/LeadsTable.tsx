@@ -26,7 +26,7 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { maskPhoneNumber, formatMaskedPhone } from "@/lib/phone-utils";
+import { formatMaskedPhone } from "@/lib/phone-utils";
 
 interface LeadsTableProps {
   data: FollowupData[];

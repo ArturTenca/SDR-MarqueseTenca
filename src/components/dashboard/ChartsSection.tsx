@@ -19,8 +19,6 @@ import {
   ResponsiveContainer,
   AreaChart,
   Area,
-  ScatterChart,
-  Scatter,
   ComposedChart,
 } from "recharts";
 import { format, parseISO, startOfWeek, getWeek, subDays } from "date-fns";
