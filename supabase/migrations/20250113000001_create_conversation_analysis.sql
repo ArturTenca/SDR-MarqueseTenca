@@ -13,7 +13,7 @@ CREATE TABLE IF NOT EXISTS conversation_analysis (
   created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
   UNIQUE(remotejID)
-);
+); 
 
 -- Create index for better performance
 CREATE INDEX IF NOT EXISTS idx_conversation_analysis_remotejid ON conversation_analysis(remotejID);
