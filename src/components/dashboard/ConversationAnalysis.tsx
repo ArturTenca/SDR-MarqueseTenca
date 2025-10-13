@@ -69,31 +69,78 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           });
         } else {
           // Calculate insights from current data if no analysis exists
-          calculateInsightsFromData();
+          await calculateInsightsFromData();
         }
       } catch (error) {
         // Error fetching analysis data - fallback to calculated insights
-        calculateInsightsFromData();
+        await calculateInsightsFromData();
       }
     };
 
     fetchAnalysisData();
   }, [data]);
 
-  const calculateInsightsFromData = () => {
+  const calculateInsightsFromData = async () => {
     if (data.length === 0) return;
 
-    // Average response time in minutes
-    const responseTimes = data.map(item => {
-      if (!item.ultimaAtividade) return 0;
-      const created = new Date(item.created_at);
-      const lastActivity = new Date(item.ultimaAtividade);
-      return differenceInHours(lastActivity, created) * 60; // Convert to minutes
-    }).filter(time => time > 0);
+    // Calculate average response time from all conversation histories
+    const calculateAvgResponseTime = async () => {
+      try {
+        // Get all conversation histories from Supabase
+        const { data: allHistories, error } = await supabase
+          .from('n8n_chat_histories')
+          .select('message')
+          .order('id', { ascending: true });
 
-    const avgResponseTime = responseTimes.length > 0 
-      ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
-      : 0;
+        if (error || !allHistories) {
+          return 0;
+        }
+
+        let totalResponseTime = 0;
+        let responseCount = 0;
+
+        // Process all conversation histories
+        allHistories.forEach(history => {
+          try {
+            const messageData = history.message as any;
+            if (messageData && Array.isArray(messageData)) {
+              const messages = messageData;
+              
+              // Calculate time between user message and bot response
+              for (let i = 1; i < messages.length; i++) {
+                const currentMessage = messages[i];
+                const previousMessage = messages[i - 1];
+                
+                // If current message is from bot and previous is from user
+                if (currentMessage.role === 'assistant' && previousMessage.role === 'user') {
+                  const currentTime = new Date(currentMessage.timestamp);
+                  const previousTime = new Date(previousMessage.timestamp);
+                  
+                  // Time between user message and bot response in minutes
+                  const responseTime = (currentTime.getTime() - previousTime.getTime()) / (1000 * 60);
+                  
+                  // Only consider reasonable response times (less than 24 hours)
+                  if (responseTime > 0 && responseTime < 1440) {
+                    totalResponseTime += responseTime;
+                    responseCount++;
+                  }
+                }
+              }
+            }
+          } catch (e) {
+            // Skip invalid message data
+            console.log('Invalid message data:', e);
+          }
+        });
+
+        return responseCount > 0 ? Math.round(totalResponseTime / responseCount) : 0;
+      } catch (error) {
+        console.log('Error calculating response time:', error);
+        return 0;
+      }
+    };
+
+    const avgResponseTime = await calculateAvgResponseTime();
 
     // Conversion rate
     const converted = data.filter(item => item.encerrado).length;
