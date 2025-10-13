@@ -12,8 +12,6 @@ import {
   TrendingUp, 
   Users, 
   Target,
-  Brain,
-  BarChart3,
   Activity
 } from "lucide-react";
 import { format, parseISO, differenceInHours } from "date-fns";
@@ -175,10 +173,10 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
       .slice(0, 3)
       .map(([hour]) => parseInt(hour));
 
-    // Top keywords (empty - will be populated by real data analysis)
+    // Top keywords (removed - not needed)
     const topKeywords: { word: string; count: number }[] = [];
 
-    // Sentiment analysis (empty - will be populated by real data analysis)
+    // Sentiment analysis (removed - not needed)
     const sentimentAnalysis = {
       positive: 0,
       neutral: 0,
@@ -397,37 +395,23 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/30">
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
-              <Brain className="h-5 w-5" />
-              Análise de Sentimento
+              <Activity className="h-5 w-5" />
+              Horários de Pico
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {insights && (insights.sentimentAnalysis.positive > 0 || insights.sentimentAnalysis.neutral > 0 || insights.sentimentAnalysis.negative > 0) ? (
-                <>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Positivo</span>
-                    <Badge variant="secondary" className="bg-green-100 text-green-800">
-                      {insights.sentimentAnalysis.positive}
-                    </Badge>
+            <div className="space-y-2">
+              {insights?.peakActivityHours && insights.peakActivityHours.length > 0 ? (
+                insights.peakActivityHours.map((hour, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm">{hour.toString().padStart(2, '0')}:00</span>
+                    <Badge variant="outline">Pico {index + 1}</Badge>
                   </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Neutro</span>
-                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                      {insights.sentimentAnalysis.neutral}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Negativo</span>
-                    <Badge variant="secondary" className="bg-red-100 text-red-800">
-                      {insights.sentimentAnalysis.negative}
-                    </Badge>
-                  </div>
-                </>
+                ))
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
-                  <p className="text-sm">Análise de sentimento não disponível</p>
-                  <p className="text-xs mt-1">Os dados serão exibidos quando houver conversas suficientes</p>
+                  <p className="text-sm">Dados de horários de pico não disponíveis</p>
+                  <p className="text-xs mt-1">Os dados serão exibidos quando houver atividade suficiente</p>
                 </div>
               )}
             </div>
@@ -460,53 +444,6 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         </Card>
       </div>
 
-      {/* Keywords and Peak Hours */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <BarChart3 className="h-5 w-5" />
-              Palavras-chave Mais Usadas
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {insights?.topKeywords && insights.topKeywords.length > 0 ? (
-                insights.topKeywords.map((keyword, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <span className="text-sm">{keyword.word}</span>
-                    <Badge variant="secondary">{keyword.count}</Badge>
-                  </div>
-                ))
-              ) : (
-                <div className="text-center py-4 text-muted-foreground">
-                  <p className="text-sm">Análise de palavras-chave não disponível</p>
-                  <p className="text-xs mt-1">Os dados serão exibidos quando houver conversas suficientes</p>
-                </div>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/30">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Activity className="h-5 w-5" />
-              Horários de Pico
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              {insights?.peakActivityHours.map((hour, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm">{hour.toString().padStart(2, '0')}:00</span>
-                  <Badge variant="outline">Pico {index + 1}</Badge>
-                </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Conversation History */}
       <Card className="transition-all duration-300 hover:shadow-lg hover:border-primary/30">
