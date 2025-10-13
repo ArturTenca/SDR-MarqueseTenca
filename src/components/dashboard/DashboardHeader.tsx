@@ -53,7 +53,7 @@ export const DashboardHeader = () => {
           <div className="flex items-center gap-4">
             <a 
               href="/" 
-              className="transition-all duration-300 hover:shadow-md hover:shadow-red-500/20 hover:bg-red-500/5 rounded-sm"
+              className="transition-all duration-300 hover:shadow-lg hover:shadow-red-500/30 hover:bg-red-500/8 rounded-sm"
               title="Voltar para visão geral"
             >
               <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto rounded-sm" />
