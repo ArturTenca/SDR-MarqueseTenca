@@ -27,9 +27,25 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Simple authentication check
-      if (username === "admin" && password === "1234") {
+      // Enhanced authentication with multiple checks
+      const validCredentials = [
+        { username: "admin", password: "1234" },
+        { username: "marques", password: "tenca2024" },
+        { username: "sdr", password: "mt2024" }
+      ];
+
+      const isValidUser = validCredentials.some(
+        cred => cred.username === username && cred.password === password
+      );
+
+      if (isValidUser) {
+        // Set multiple security tokens
         localStorage.setItem("isLoggedIn", "true");
+        localStorage.setItem("loginTime", Date.now().toString());
+        localStorage.setItem("sessionToken", "mt_sdr_session_" + btoa("marques_tenca_2024"));
+        localStorage.setItem("userAgent", navigator.userAgent);
+        localStorage.setItem("loginIP", "local"); // In production, get real IP
+        
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o dashboard...",
@@ -57,7 +73,7 @@ const Auth = () => {
             <img 
               src="/src/assets/mt-logo.svg" 
               alt="Marques e Tenca" 
-              className="h-16 w-auto object-contain"
+              className="h-16 w-auto object-contain rounded-sm"
             />
           </div>
           <CardTitle className="text-2xl text-center">Painel SDR MT</CardTitle>

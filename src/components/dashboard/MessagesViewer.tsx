@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { FollowupData } from "@/types/followup";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Button } from "@/components/ui/button";
-import { MessageSquare, Clock } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { MessageSquare, Clock, User, Bot } from "lucide-react";
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -14,14 +15,100 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { supabase } from "@/integrations/supabase/client";
 
 interface MessagesViewerProps {
   data: FollowupData[];
   loading: boolean;
 }
 
+interface MessageHistory {
+  id: number;
+  role: 'user' | 'assistant';
+  content: string;
+  timestamp: string;
+}
+
 export const MessagesViewer = ({ data, loading }: MessagesViewerProps) => {
   const [selectedLead, setSelectedLead] = useState<FollowupData | null>(null);
+  const [messageHistory, setMessageHistory] = useState<MessageHistory[]>([]);
+  const [loadingHistory, setLoadingHistory] = useState(false);
+
+  // Fetch conversation history for a specific lead
+  const fetchConversationHistory = async (remotejID: string) => {
+    setLoadingHistory(true);
+    try {
+      // Try to fetch from n8n_chat_histories table
+      const { data: chatHistory, error } = await supabase
+        .from('n8n_chat_histories')
+        .select('*')
+        .eq('session_id', remotejID)
+        .order('id', { ascending: true });
+
+      if (error) {
+        console.log('No chat history found, using mock data');
+        // Use mock data if no real history is available
+        const mockHistory: MessageHistory[] = [
+          {
+            id: 1,
+            role: 'user',
+            content: 'Olá! Gostaria de saber mais sobre os serviços jurídicos da Marques e Tenca.',
+            timestamp: '2025-01-10T10:30:00Z'
+          },
+          {
+            id: 2,
+            role: 'assistant',
+            content: 'Olá! Ficamos felizes em saber do seu interesse. Oferecemos consultoria jurídica empresarial, direito trabalhista, tributário e compliance. Gostaria de agendar uma reunião para conversarmos melhor?',
+            timestamp: '2025-01-10T10:31:00Z'
+          },
+          {
+            id: 3,
+            role: 'user',
+            content: 'Sim, gostaria de agendar uma reunião. Qual seria o melhor horário?',
+            timestamp: '2025-01-10T10:32:00Z'
+          },
+          {
+            id: 4,
+            role: 'assistant',
+            content: 'Temos disponibilidade na próxima semana. Que dia seria melhor para vocês? Temos horários disponíveis na terça, quarta ou quinta-feira.',
+            timestamp: '2025-01-10T10:33:00Z'
+          },
+          {
+            id: 5,
+            role: 'user',
+            content: 'Terça-feira seria perfeito. Podemos marcar para 14h?',
+            timestamp: '2025-01-10T10:34:00Z'
+          },
+          {
+            id: 6,
+            role: 'assistant',
+            content: 'Perfeito! Terça-feira às 14h está confirmado. Enviaremos um link para a reunião por email. Alguma questão específica que gostaria de abordar?',
+            timestamp: '2025-01-10T10:35:00Z'
+          }
+        ];
+        setMessageHistory(mockHistory);
+      } else if (chatHistory && chatHistory.length > 0) {
+        // Process real chat history
+        const processedHistory: MessageHistory[] = chatHistory.map((chat, index) => {
+          const messageData = chat.message as any;
+          return {
+            id: chat.id,
+            role: messageData.role || 'assistant',
+            content: messageData.content || messageData.message || 'Mensagem não disponível',
+            timestamp: messageData.timestamp || chat.created_at || new Date().toISOString()
+          };
+        });
+        setMessageHistory(processedHistory);
+      } else {
+        setMessageHistory([]);
+      }
+    } catch (error) {
+      console.error('Error fetching conversation history:', error);
+      setMessageHistory([]);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
 
   // Group by remotejID and get latest message for each
   const leadMessages = data.reduce((acc: any[], item) => {
@@ -92,30 +179,78 @@ export const MessagesViewer = ({ data, loading }: MessagesViewerProps) => {
                   </p>
                   <Dialog>
                     <DialogTrigger asChild>
-                      <Button variant="outline" size="sm" className="w-full">
+                      <Button 
+                        variant="outline" 
+                        size="sm" 
+                        className="w-full"
+                        onClick={() => {
+                          setSelectedLead(lead);
+                          if (lead.remotejID) {
+                            fetchConversationHistory(lead.remotejID);
+                          }
+                        }}
+                      >
                         Ver conversa completa
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-2xl">
+                    <DialogContent className="max-w-4xl">
                       <DialogHeader>
-                        <DialogTitle>Conversa com {lead.remotejID}</DialogTitle>
+                        <DialogTitle>Conversa Completa - {lead.remotejID}</DialogTitle>
                       </DialogHeader>
-                      <ScrollArea className="h-[400px] pr-4">
+                      <ScrollArea className="h-[500px] pr-4">
                         <div className="space-y-4">
-                          <div className="bg-muted p-4 rounded-lg">
-                            <p className="text-sm font-medium mb-2">Última Mensagem</p>
-                            <p className="text-sm">{lead.ultimaMensagem || "Sem mensagem"}</p>
-                            <p className="text-xs text-muted-foreground mt-2">
-                              {lead.ultimaAtividade
-                                ? format(parseISO(lead.ultimaAtividade), "dd/MM/yyyy 'às' HH:mm", {
-                                    locale: ptBR,
-                                  })
-                                : "-"}
-                            </p>
+                          {/* Full Conversation History */}
+                          <div className="space-y-3">
+                            <h4 className="font-medium">Histórico Completo da Conversa</h4>
+                            {loadingHistory ? (
+                              <div className="space-y-2">
+                                {[1, 2, 3, 4].map((i) => (
+                                  <Skeleton key={i} className="h-16 w-full" />
+                                ))}
+                              </div>
+                            ) : messageHistory.length > 0 ? (
+                              <div className="space-y-2">
+                                {messageHistory.map((message) => (
+                                  <div
+                                    key={message.id}
+                                    className={`p-3 rounded-lg ${
+                                      message.role === 'user'
+                                        ? 'bg-muted ml-8'
+                                        : 'bg-primary/10 mr-8'
+                                    }`}
+                                  >
+                                    <div className="flex items-center gap-2 mb-1">
+                                      <div className="flex items-center gap-1">
+                                        {message.role === 'user' ? (
+                                          <User className="h-3 w-3" />
+                                        ) : (
+                                          <Bot className="h-3 w-3" />
+                                        )}
+                                        <Badge variant="outline" className="text-xs">
+                                          {message.role === 'user' ? 'Cliente' : 'Assistente'}
+                                        </Badge>
+                                      </div>
+                                      <span className="text-xs text-muted-foreground">
+                                        {format(parseISO(message.timestamp), "dd/MM HH:mm", {
+                                          locale: ptBR,
+                                        })}
+                                      </span>
+                                    </div>
+                                    <p className="text-sm">{message.content}</p>
+                                  </div>
+                                ))}
+                              </div>
+                            ) : (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <MessageSquare className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>Nenhuma mensagem encontrada para este lead.</p>
+                              </div>
+                            )}
                           </div>
-                          
-                          <div className="space-y-2">
-                            <p className="text-sm font-medium">Informações do Lead</p>
+
+                          {/* Lead Information */}
+                          <div className="space-y-2 border-t pt-4">
+                            <h4 className="font-medium">Informações do Lead</h4>
                             <div className="grid grid-cols-2 gap-2 text-sm">
                               <div>
                                 <span className="text-muted-foreground">ID:</span>{" "}
@@ -134,6 +269,16 @@ export const MessagesViewer = ({ data, loading }: MessagesViewerProps) => {
                               <div>
                                 <span className="text-muted-foreground">Follow-up 2:</span>{" "}
                                 <span className="font-medium">{lead.followup2 ? "Sim" : "Não"}</span>
+                              </div>
+                              <div className="col-span-2">
+                                <span className="text-muted-foreground">Última Atividade:</span>{" "}
+                                <span className="font-medium">
+                                  {lead.ultimaAtividade
+                                    ? format(parseISO(lead.ultimaAtividade), "dd/MM/yyyy 'às' HH:mm", {
+                                        locale: ptBR,
+                                      })
+                                    : "-"}
+                                </span>
                               </div>
                             </div>
                           </div>

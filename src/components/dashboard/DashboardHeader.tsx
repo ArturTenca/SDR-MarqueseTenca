@@ -14,7 +14,10 @@ export const DashboardHeader = () => {
 
   const handleLogout = async () => {
     try {
-      localStorage.removeItem("isLoggedIn");
+      // Clear all security tokens
+      localStorage.clear();
+      sessionStorage.clear();
+      
       toast({
         title: "Logout realizado",
         description: "Você foi desconectado com sucesso.",
@@ -48,7 +51,7 @@ export const DashboardHeader = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto transition-all duration-300 hover:scale-110 hover:rotate-3" />
+            <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto rounded-sm transition-all duration-300 hover:scale-110 hover:rotate-3" />
             <Button
               variant="outline"
               size="icon"
