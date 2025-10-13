@@ -5,7 +5,7 @@ import { Moon, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
-import mtLogo from "@/assets/mt-logo.svg";
+// Logo moved to public folder
 
 export const DashboardHeader = () => {
   const { theme, setTheme } = useTheme();
@@ -70,7 +70,7 @@ export const DashboardHeader = () => {
               className="transition-all duration-300 hover:shadow-lg hover:shadow-red-500/30 hover:bg-red-500/8 rounded-sm"
               title="Voltar para visão geral"
             >
-              <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto rounded-sm" />
+              <img src="/mt-logo.svg" alt="Marques e Tenca" className="h-10 w-auto rounded-sm" />
             </a>
             <Button
               variant="outline"
