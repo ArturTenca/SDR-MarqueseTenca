@@ -71,7 +71,7 @@ const Auth = () => {
         <CardHeader className="space-y-1">
           <div className="flex justify-center mb-4">
             <img 
-              src="/src/assets/mt-logo.svg" 
+              src="/mt-logo.svg" 
               alt="Marques e Tenca" 
               className="h-16 w-auto object-contain rounded-sm"
             />

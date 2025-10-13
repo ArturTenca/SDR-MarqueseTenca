@@ -114,7 +114,7 @@ const Index = () => {
           </div>
           <div className="flex items-center gap-2 px-4 py-2 bg-transparent text-[#EA4B71] rounded-lg text-sm font-medium">
             <div className="w-6 h-6 bg-transparent rounded flex items-center justify-center" style={{filter: 'drop-shadow(0 0 8px #EA4B71) drop-shadow(0 0 16px #EA4B71)'}}>
-              <img width={19} height={19} src="src/assets/n8n-color.png" alt="" />
+              <img width={19} height={19} src="/n8n-color.png" alt="" />
             </div>
             Powered by n8n
           </div>
