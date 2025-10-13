@@ -51,7 +51,13 @@ export const DashboardHeader = () => {
           </div>
           
           <div className="flex items-center gap-4">
-            <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto rounded-lg transition-all duration-300 hover:scale-110 hover:rotate-3" />
+            <a 
+              href="/" 
+              className="transition-all duration-300 hover:shadow-lg hover:shadow-red-500/50 hover:bg-red-500/10 rounded-lg p-1"
+              title="Voltar para visão geral"
+            >
+              <img src={mtLogo} alt="Marques e Tenca" className="h-10 w-auto rounded-lg" />
+            </a>
             <Button
               variant="outline"
               size="icon"
