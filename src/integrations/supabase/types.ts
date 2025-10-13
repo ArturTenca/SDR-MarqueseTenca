@@ -134,6 +134,51 @@ export type Database = {
         }
         Relationships: []
       }
+      conversation_analysis: {
+        Row: {
+          id: number
+          remotejID: string
+          avg_response_time_hours: number | null
+          conversion_rate: number | null
+          avg_messages_per_lead: number | null
+          peak_activity_hours: number[] | null
+          top_keywords: Json | null
+          sentiment_analysis: Json | null
+          followup_effectiveness: Json | null
+          total_conversations: number | null
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: number
+          remotejID: string
+          avg_response_time_hours?: number | null
+          conversion_rate?: number | null
+          avg_messages_per_lead?: number | null
+          peak_activity_hours?: number[] | null
+          top_keywords?: Json | null
+          sentiment_analysis?: Json | null
+          followup_effectiveness?: Json | null
+          total_conversations?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: number
+          remotejID?: string
+          avg_response_time_hours?: number | null
+          conversion_rate?: number | null
+          avg_messages_per_lead?: number | null
+          peak_activity_hours?: number[] | null
+          top_keywords?: Json | null
+          sentiment_analysis?: Json | null
+          followup_effectiveness?: Json | null
+          total_conversations?: number | null
+          created_at?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string | null

@@ -46,47 +46,8 @@ export const MessagesViewer = ({ data, loading }: MessagesViewerProps) => {
         .order('id', { ascending: true });
 
       if (error) {
-        console.log('No chat history found, using mock data');
-        // Use mock data if no real history is available
-        const mockHistory: MessageHistory[] = [
-          {
-            id: 1,
-            role: 'user',
-            content: 'Olá! Gostaria de saber mais sobre os serviços jurídicos da Marques e Tenca.',
-            timestamp: '2025-01-10T10:30:00Z'
-          },
-          {
-            id: 2,
-            role: 'assistant',
-            content: 'Olá! Ficamos felizes em saber do seu interesse. Oferecemos consultoria jurídica empresarial, direito trabalhista, tributário e compliance. Gostaria de agendar uma reunião para conversarmos melhor?',
-            timestamp: '2025-01-10T10:31:00Z'
-          },
-          {
-            id: 3,
-            role: 'user',
-            content: 'Sim, gostaria de agendar uma reunião. Qual seria o melhor horário?',
-            timestamp: '2025-01-10T10:32:00Z'
-          },
-          {
-            id: 4,
-            role: 'assistant',
-            content: 'Temos disponibilidade na próxima semana. Que dia seria melhor para vocês? Temos horários disponíveis na terça, quarta ou quinta-feira.',
-            timestamp: '2025-01-10T10:33:00Z'
-          },
-          {
-            id: 5,
-            role: 'user',
-            content: 'Terça-feira seria perfeito. Podemos marcar para 14h?',
-            timestamp: '2025-01-10T10:34:00Z'
-          },
-          {
-            id: 6,
-            role: 'assistant',
-            content: 'Perfeito! Terça-feira às 14h está confirmado. Enviaremos um link para a reunião por email. Alguma questão específica que gostaria de abordar?',
-            timestamp: '2025-01-10T10:35:00Z'
-          }
-        ];
-        setMessageHistory(mockHistory);
+        console.log('Error fetching chat history:', error);
+        setMessageHistory([]);
       } else if (chatHistory && chatHistory.length > 0) {
         // Process real chat history
         const processedHistory: MessageHistory[] = chatHistory.map((chat, index) => {

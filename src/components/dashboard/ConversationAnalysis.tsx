@@ -3,6 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { FollowupData } from "@/types/followup";
+import { ConversationAnalysisData, ConversationInsights, ConversationHistory } from "@/types/conversation-analysis";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { 
@@ -25,152 +26,221 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { supabase } from "@/integrations/supabase/client";
+import { useToast } from "@/hooks/use-toast";
 
 interface ConversationAnalysisProps {
   data: FollowupData[];
   loading: boolean;
 }
 
-interface ConversationInsights {
-  avgResponseTime: number;
-  conversionRate: number;
-  avgMessagesPerLead: number;
-  peakActivityHours: number[];
-  topKeywords: { word: string; count: number }[];
-  sentimentAnalysis: {
-    positive: number;
-    neutral: number;
-    negative: number;
-  };
-  followupEffectiveness: {
-    followup1: number;
-    followup2: number;
-  };
-}
-
 export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProps) => {
   const [insights, setInsights] = useState<ConversationInsights | null>(null);
   const [selectedLead, setSelectedLead] = useState<FollowupData | null>(null);
-  const [conversationHistory, setConversationHistory] = useState<any[]>([]);
+  const [conversationHistory, setConversationHistory] = useState<ConversationHistory | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [analysisData, setAnalysisData] = useState<ConversationAnalysisData | null>(null);
+  const { toast } = useToast();
 
-  // Calculate conversation insights
+  // Fetch conversation analysis data from Supabase
   useEffect(() => {
-    if (data.length === 0) return;
+    const fetchAnalysisData = async () => {
+      try {
+        const { data: analysis, error } = await supabase
+          .from('conversation_analysis')
+          .select('*')
+          .order('updated_at', { ascending: false })
+          .limit(1)
+          .single();
 
-    const calculateInsights = () => {
-      // Average response time (simulated based on activity patterns)
-      const responseTimes = data.map(item => {
-        if (!item.ultimaAtividade) return 0;
-        const created = new Date(item.created_at);
-        const lastActivity = new Date(item.ultimaAtividade);
-        return differenceInHours(lastActivity, created);
-      }).filter(time => time > 0);
+        if (error && error.code !== 'PGRST116') { // PGRST116 = no rows returned
+          throw error;
+        }
 
-      const avgResponseTime = responseTimes.length > 0 
-        ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
-        : 0;
-
-      // Conversion rate
-      const converted = data.filter(item => item.encerrado).length;
-      const conversionRate = (converted / data.length) * 100;
-
-      // Average messages per lead (simulated)
-      const avgMessagesPerLead = Math.round(data.length * 3.2); // Simulated average
-
-      // Peak activity hours
-      const hourlyActivity = data.reduce((acc: any, item) => {
-        if (!item.ultimaAtividade) return acc;
-        const hour = new Date(item.ultimaAtividade).getHours();
-        acc[hour] = (acc[hour] || 0) + 1;
-        return acc;
-      }, {});
-
-      const peakActivityHours = Object.entries(hourlyActivity)
-        .sort(([,a], [,b]) => (b as number) - (a as number))
-        .slice(0, 3)
-        .map(([hour]) => parseInt(hour));
-
-      // Top keywords (simulated based on common legal terms)
-      const keywords = [
-        'consultoria', 'contrato', 'trabalhista', 'tributário', 'compliance',
-        'reunião', 'proposta', 'valor', 'serviço', 'empresa', 'direito',
-        'advogado', 'jurídico', 'cliente', 'negociação'
-      ];
-      
-      const topKeywords = keywords.slice(0, 5).map(word => ({
-        word,
-        count: Math.floor(Math.random() * 20) + 5
-      }));
-
-      // Sentiment analysis (simulated)
-      const sentimentAnalysis = {
-        positive: Math.round(data.length * 0.45),
-        neutral: Math.round(data.length * 0.35),
-        negative: Math.round(data.length * 0.20)
-      };
-
-      // Follow-up effectiveness
-      const followup1Count = data.filter(item => item.followup1).length;
-      const followup2Count = data.filter(item => item.followup2).length;
-      const followupEffectiveness = {
-        followup1: followup1Count > 0 ? (converted / followup1Count) * 100 : 0,
-        followup2: followup2Count > 0 ? (converted / followup2Count) * 100 : 0
-      };
-
-      setInsights({
-        avgResponseTime,
-        conversionRate,
-        avgMessagesPerLead,
-        peakActivityHours,
-        topKeywords,
-        sentimentAnalysis,
-        followupEffectiveness
-      });
+        if (analysis) {
+          setAnalysisData(analysis);
+          setInsights({
+            avgResponseTime: analysis.avg_response_time_hours || 0,
+            conversionRate: analysis.conversion_rate || 0,
+            avgMessagesPerLead: analysis.avg_messages_per_lead || 0,
+            peakActivityHours: analysis.peak_activity_hours || [],
+            topKeywords: analysis.top_keywords || [],
+            sentimentAnalysis: analysis.sentiment_analysis || { positive: 0, neutral: 0, negative: 0 },
+            followupEffectiveness: analysis.followup_effectiveness || { followup1: 0, followup2: 0 }
+          });
+        } else {
+          // Calculate insights from current data if no analysis exists
+          calculateInsightsFromData();
+        }
+      } catch (error) {
+        console.error('Error fetching analysis data:', error);
+        calculateInsightsFromData();
+      }
     };
 
-    calculateInsights();
+    fetchAnalysisData();
   }, [data]);
+
+  const calculateInsightsFromData = () => {
+    if (data.length === 0) return;
+
+    // Average response time
+    const responseTimes = data.map(item => {
+      if (!item.ultimaAtividade) return 0;
+      const created = new Date(item.created_at);
+      const lastActivity = new Date(item.ultimaAtividade);
+      return differenceInHours(lastActivity, created);
+    }).filter(time => time > 0);
+
+    const avgResponseTime = responseTimes.length > 0 
+      ? responseTimes.reduce((a, b) => a + b, 0) / responseTimes.length 
+      : 0;
+
+    // Conversion rate
+    const converted = data.filter(item => item.encerrado).length;
+    const conversionRate = (converted / data.length) * 100;
+
+    // Average messages per lead (estimated)
+    const avgMessagesPerLead = Math.round(data.length * 3.2);
+
+    // Peak activity hours
+    const hourlyActivity = data.reduce((acc: any, item) => {
+      if (!item.ultimaAtividade) return acc;
+      const hour = new Date(item.ultimaAtividade).getHours();
+      acc[hour] = (acc[hour] || 0) + 1;
+      return acc;
+    }, {});
+
+    const peakActivityHours = Object.entries(hourlyActivity)
+      .sort(([,a], [,b]) => (b as number) - (a as number))
+      .slice(0, 3)
+      .map(([hour]) => parseInt(hour));
+
+    // Top keywords (empty - will be populated by real data analysis)
+    const topKeywords: { word: string; count: number }[] = [];
+
+    // Sentiment analysis (empty - will be populated by real data analysis)
+    const sentimentAnalysis = {
+      positive: 0,
+      neutral: 0,
+      negative: 0
+    };
+
+    // Follow-up effectiveness with new logic
+    const followup1Only = data.filter(item => item.followup1 && !item.followup2);
+    const followup2Only = data.filter(item => item.followup2 && !item.followup1);
+    const bothFollowups = data.filter(item => item.followup1 && item.followup2);
+    
+    // Followup1 effectiveness: only count leads that converted with followup1 only
+    const followup1Converted = followup1Only.filter(item => item.encerrado).length;
+    const followup1Effectiveness = followup1Only.length > 0 ? (followup1Converted / followup1Only.length) * 100 : 0;
+    
+    // Followup2 effectiveness: count all leads that converted with followup2 (including those with both)
+    const followup2Converted = data.filter(item => item.followup2 && item.encerrado).length;
+    const followup2Effectiveness = data.filter(item => item.followup2).length > 0 ? (followup2Converted / data.filter(item => item.followup2).length) * 100 : 0;
+
+    const followupEffectiveness = {
+      followup1: followup1Effectiveness,
+      followup2: followup2Effectiveness
+    };
+
+    setInsights({
+      avgResponseTime,
+      conversionRate,
+      avgMessagesPerLead,
+      peakActivityHours,
+      topKeywords,
+      sentimentAnalysis,
+      followupEffectiveness
+    });
+  };
 
   const fetchConversationHistory = async (remotejID: string) => {
     setLoadingHistory(true);
     try {
-      // Simulate fetching conversation history
-      // In a real implementation, you would query the n8n_chat_histories table
-      const mockHistory = [
-        {
-          id: 1,
-          role: 'user',
-          content: 'Olá! Gostaria de saber mais sobre os serviços jurídicos.',
-          timestamp: '2025-01-10T10:30:00Z'
-        },
-        {
-          id: 2,
-          role: 'assistant',
-          content: 'Olá! Ficamos felizes em saber do seu interesse. Oferecemos consultoria jurídica empresarial, direito trabalhista, tributário e compliance.',
-          timestamp: '2025-01-10T10:31:00Z'
-        },
-        {
-          id: 3,
-          role: 'user',
-          content: 'Sim, gostaria de agendar uma reunião. Qual seria o melhor horário?',
-          timestamp: '2025-01-10T10:32:00Z'
-        },
-        {
-          id: 4,
-          role: 'assistant',
-          content: 'Temos disponibilidade na próxima semana. Que dia seria melhor para vocês?',
-          timestamp: '2025-01-10T10:33:00Z'
-        }
-      ];
-      
-      setConversationHistory(mockHistory);
+      // Fetch real conversation history from n8n_chat_histories table
+      const { data: historyData, error } = await supabase
+        .from('n8n_chat_histories')
+        .select('*')
+        .eq('session_id', remotejID)
+        .order('id', { ascending: true });
+
+      if (error) {
+        throw error;
+      }
+
+      if (historyData && historyData.length > 0) {
+        // Parse the message JSON and format it
+        const messages = historyData.map((item: any) => {
+          const messageData = item.message as any;
+          return {
+            id: item.id,
+            role: messageData.role || 'user',
+            content: messageData.content || messageData.text || 'Mensagem sem conteúdo',
+            timestamp: messageData.timestamp || item.created_at || new Date().toISOString()
+          };
+        });
+
+        setConversationHistory({
+          session_id: remotejID,
+          messages
+        });
+      } else {
+        // No conversation history found
+        setConversationHistory({
+          session_id: remotejID,
+          messages: []
+        });
+      }
     } catch (error) {
       console.error('Error fetching conversation history:', error);
+      toast({
+        title: "Erro ao carregar histórico",
+        description: "Não foi possível carregar o histórico da conversa.",
+        variant: "destructive",
+      });
     } finally {
       setLoadingHistory(false);
     }
   };
+
+  // Function to save analysis data to Supabase
+  const saveAnalysisData = async (insights: ConversationInsights) => {
+    try {
+      const analysisData = {
+        remotejID: 'global_analysis',
+        avg_response_time_hours: insights.avgResponseTime,
+        conversion_rate: insights.conversionRate,
+        avg_messages_per_lead: insights.avgMessagesPerLead,
+        peak_activity_hours: insights.peakActivityHours,
+        top_keywords: insights.topKeywords,
+        sentiment_analysis: insights.sentimentAnalysis,
+        followup_effectiveness: insights.followupEffectiveness,
+        total_conversations: data.length
+      };
+
+      const { error } = await supabase
+        .from('conversation_analysis')
+        .upsert(analysisData, { 
+          onConflict: 'remotejID',
+          ignoreDuplicates: false 
+        });
+
+      if (error) {
+        throw error;
+      }
+
+      console.log('Analysis data saved successfully');
+    } catch (error) {
+      console.error('Error saving analysis data:', error);
+    }
+  };
+
+  // Save analysis data when insights change
+  useEffect(() => {
+    if (insights && data.length > 0) {
+      saveAnalysisData(insights);
+    }
+  }, [insights, data.length]);
 
   if (loading) {
     return (
@@ -273,24 +343,33 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Positivo</span>
-                <Badge variant="secondary" className="bg-green-100 text-green-800">
-                  {insights ? insights.sentimentAnalysis.positive : 0}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Neutro</span>
-                <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
-                  {insights ? insights.sentimentAnalysis.neutral : 0}
-                </Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm">Negativo</span>
-                <Badge variant="secondary" className="bg-red-100 text-red-800">
-                  {insights ? insights.sentimentAnalysis.negative : 0}
-                </Badge>
-              </div>
+              {insights && (insights.sentimentAnalysis.positive > 0 || insights.sentimentAnalysis.neutral > 0 || insights.sentimentAnalysis.negative > 0) ? (
+                <>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Positivo</span>
+                    <Badge variant="secondary" className="bg-green-100 text-green-800">
+                      {insights.sentimentAnalysis.positive}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Neutro</span>
+                    <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                      {insights.sentimentAnalysis.neutral}
+                    </Badge>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Negativo</span>
+                    <Badge variant="secondary" className="bg-red-100 text-red-800">
+                      {insights.sentimentAnalysis.negative}
+                    </Badge>
+                  </div>
+                </>
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p className="text-sm">Análise de sentimento não disponível</p>
+                  <p className="text-xs mt-1">Os dados serão exibidos quando houver conversas suficientes</p>
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -332,12 +411,19 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           </CardHeader>
           <CardContent>
             <div className="space-y-2">
-              {insights?.topKeywords.map((keyword, index) => (
-                <div key={index} className="flex items-center justify-between">
-                  <span className="text-sm">{keyword.word}</span>
-                  <Badge variant="secondary">{keyword.count}</Badge>
+              {insights?.topKeywords && insights.topKeywords.length > 0 ? (
+                insights.topKeywords.map((keyword, index) => (
+                  <div key={index} className="flex items-center justify-between">
+                    <span className="text-sm">{keyword.word}</span>
+                    <Badge variant="secondary">{keyword.count}</Badge>
+                  </div>
+                ))
+              ) : (
+                <div className="text-center py-4 text-muted-foreground">
+                  <p className="text-sm">Análise de palavras-chave não disponível</p>
+                  <p className="text-xs mt-1">Os dados serão exibidos quando houver conversas suficientes</p>
                 </div>
-              ))}
+              )}
             </div>
           </CardContent>
         </Card>
@@ -435,9 +521,15 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                                   <Skeleton key={i} className="h-16 w-full" />
                                 ))}
                               </div>
+                            ) : conversationHistory?.messages.length === 0 ? (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p>Nenhum histórico de conversa encontrado para este lead.</p>
+                                <p className="text-sm mt-2">Os dados serão exibidos quando as conversas estiverem disponíveis no n8n.</p>
+                              </div>
                             ) : (
                               <div className="space-y-2">
-                                {conversationHistory.map((message) => (
+                                {conversationHistory?.messages.map((message) => (
                                   <div
                                     key={message.id}
                                     className={`p-3 rounded-lg ${
