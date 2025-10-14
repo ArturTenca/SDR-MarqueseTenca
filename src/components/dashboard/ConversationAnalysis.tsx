@@ -447,11 +447,13 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           const messageData = item.message as any;
           
           // Log first few messages for debugging
-          if (index < 3) {
+          if (index < 5) {
             console.log(`📝 Message ${index + 1} structure:`, {
               id: item.id,
               session_id: item.session_id,
               message: messageData,
+              messageType: messageData?.type,
+              messageRole: messageData?.role,
               created_at: item.created_at,
               timestamp: item.timestamp
             });
@@ -461,6 +463,14 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
           let role = 'user'; // Default to user
           
           if (messageData) {
+            console.log(`🔍 Analyzing message ${index + 1}:`, {
+              type: messageData.type,
+              role: messageData.role,
+              from: messageData.from,
+              sender: messageData.sender,
+              content: messageData.content?.substring(0, 50) + '...'
+            });
+            
             // Check for type field - AI means bot/assistant
             if (messageData.type === 'AI') {
               role = 'assistant';
@@ -469,18 +479,24 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
             // Check for explicit role field
             else if (messageData.role) {
               role = messageData.role;
+              console.log(`👤 Identified by role field: "${messageData.role}"`);
             }
             // Check for other indicators
             else if (messageData.from === 'bot' || messageData.sender === 'bot' || messageData.type === 'bot') {
               role = 'assistant';
+              console.log(`🤖 Identified as assistant by other indicators`);
             }
             else if (messageData.from === 'user' || messageData.sender === 'user' || messageData.type === 'user') {
               role = 'user';
+              console.log(`👤 Identified as user by indicators`);
             }
             // If no clear indicator, default to user
             else {
               role = 'user';
+              console.log(`❓ No clear indicator found, defaulting to user`);
             }
+          } else {
+            console.log(`❌ No messageData found for message ${index + 1}`);
           }
           
           return {
