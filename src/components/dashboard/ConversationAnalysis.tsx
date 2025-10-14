@@ -643,13 +643,13 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
               <div className="flex items-center justify-between">
                 <span className="text-sm">Follow-up 1</span>
                 <Badge variant="outline">
-                  {insights ? `${insights.followupEffectiveness.followup1.toFixed(1)}%` : '0%'}
+                  {insights ? `${Math.round(insights.followupEffectiveness.followup1)}%` : '0%'}
                 </Badge>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-sm">Follow-up 2</span>
                 <Badge variant="outline">
-                  {insights ? `${insights.followupEffectiveness.followup2.toFixed(1)}%` : '0%'}
+                  {insights ? `${Math.round(insights.followupEffectiveness.followup2)}%` : '0%'}
                 </Badge>
               </div>
             </div>
