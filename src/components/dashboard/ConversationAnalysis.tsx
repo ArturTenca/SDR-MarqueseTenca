@@ -471,10 +471,15 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
               content: messageData.content?.substring(0, 50) + '...'
             });
             
-            // Check for type field - AI means bot/assistant
-            if (messageData.type === 'AI') {
+            // Check for type field - ai means bot/assistant
+            if (messageData.type === 'ai') {
               role = 'assistant';
               console.log(`🤖 Identified as assistant by type: "${messageData.type}"`);
+            }
+            // Check for human type
+            else if (messageData.type === 'human') {
+              role = 'user';
+              console.log(`👤 Identified as user by type: "${messageData.type}"`);
             }
             // Check for explicit role field
             else if (messageData.role) {
