@@ -440,16 +440,58 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
       }
 
       if (historyData && historyData.length > 0) {
+        console.log('🔍 Raw chat history data:', historyData);
+        
         // Parse the message JSON and format it
-        const messages = historyData.map((item: any) => {
+        const messages = historyData.map((item: any, index: number) => {
           const messageData = item.message as any;
+          
+          // Log first few messages for debugging
+          if (index < 3) {
+            console.log(`📝 Message ${index + 1} structure:`, {
+              id: item.id,
+              session_id: item.session_id,
+              message: messageData,
+              created_at: item.created_at,
+              timestamp: item.timestamp
+            });
+          }
+          
+          // Determine role based on message structure
+          let role = 'user'; // Default to user
+          
+          if (messageData) {
+            // Check for explicit role field
+            if (messageData.role) {
+              role = messageData.role;
+            }
+            // Check for other indicators
+            else if (messageData.from === 'bot' || messageData.sender === 'bot' || messageData.type === 'bot') {
+              role = 'assistant';
+            }
+            else if (messageData.from === 'user' || messageData.sender === 'user' || messageData.type === 'user') {
+              role = 'user';
+            }
+            // Check content patterns that might indicate bot messages
+            else if (messageData.content && (
+              messageData.content.includes('Olá!') ||
+              messageData.content.includes('Como posso ajudar') ||
+              messageData.content.includes('Obrigado') ||
+              messageData.content.includes('Até logo')
+            )) {
+              role = 'assistant';
+            }
+          }
+          
           return {
             id: item.id,
-            role: messageData.role || 'user',
-            content: messageData.content || messageData.text || 'Mensagem sem conteúdo',
-            timestamp: messageData.timestamp || item.created_at || new Date().toISOString()
+            role: role,
+            content: messageData?.content || messageData?.text || messageData?.message || 'Mensagem sem conteúdo',
+            timestamp: messageData?.timestamp || item.created_at || new Date().toISOString()
           };
         });
+        
+        console.log('🎯 Processed messages:', messages);
 
         setConversationHistory({
           session_id: remotejID,

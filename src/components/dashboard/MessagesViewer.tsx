@@ -49,16 +49,58 @@ export const MessagesViewer = ({ data, loading }: MessagesViewerProps) => {
         // Error fetching chat history
         setMessageHistory([]);
       } else if (chatHistory && chatHistory.length > 0) {
+        console.log('🔍 Raw chat history data (MessagesViewer):', chatHistory);
+        
         // Process real chat history
         const processedHistory: MessageHistory[] = chatHistory.map((chat, index) => {
           const messageData = chat.message as any;
+          
+          // Log first few messages for debugging
+          if (index < 3) {
+            console.log(`📝 Message ${index + 1} structure (MessagesViewer):`, {
+              id: chat.id,
+              session_id: chat.session_id,
+              message: messageData,
+              created_at: chat.created_at,
+              timestamp: chat.timestamp
+            });
+          }
+          
+          // Determine role based on message structure
+          let role = 'user'; // Default to user
+          
+          if (messageData) {
+            // Check for explicit role field
+            if (messageData.role) {
+              role = messageData.role;
+            }
+            // Check for other indicators
+            else if (messageData.from === 'bot' || messageData.sender === 'bot' || messageData.type === 'bot') {
+              role = 'assistant';
+            }
+            else if (messageData.from === 'user' || messageData.sender === 'user' || messageData.type === 'user') {
+              role = 'user';
+            }
+            // Check content patterns that might indicate bot messages
+            else if (messageData.content && (
+              messageData.content.includes('Olá!') ||
+              messageData.content.includes('Como posso ajudar') ||
+              messageData.content.includes('Obrigado') ||
+              messageData.content.includes('Até logo')
+            )) {
+              role = 'assistant';
+            }
+          }
+          
           return {
             id: chat.id,
-            role: messageData.role || 'assistant',
-            content: messageData.content || messageData.message || 'Mensagem não disponível',
-            timestamp: messageData.timestamp || chat.created_at || new Date().toISOString()
+            role: role,
+            content: messageData?.content || messageData?.text || messageData?.message || 'Mensagem não disponível',
+            timestamp: messageData?.timestamp || chat.created_at || new Date().toISOString()
           };
         });
+        
+        console.log('🎯 Processed messages (MessagesViewer):', processedHistory);
         setMessageHistory(processedHistory);
       } else {
         setMessageHistory([]);
