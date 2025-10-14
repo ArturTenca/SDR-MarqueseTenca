@@ -283,6 +283,119 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
       }
     };
 
+    const calculateFollowupEffectiveness = async () => {
+      try {
+        console.log('🔍 Starting followup effectiveness calculation...');
+        
+        // Get all leads with followup2 = true
+        const followup2Leads = data.filter(item => item.followup2);
+        console.log('📊 Followup2 leads found:', followup2Leads.length);
+        
+        if (followup2Leads.length === 0) {
+          console.log('⚠️ No followup2 leads found');
+          return { followup1: 0, followup2: 0 };
+        }
+
+        let effectiveFollowup2Count = 0;
+        const followup2Analysis = [];
+
+        // Check each followup2 lead for messages after followup2 was set to true
+        for (const lead of followup2Leads) {
+          try {
+            // Get chat history for this lead
+            const { data: chatHistory, error } = await supabase
+              .from('n8n_chat_histories')
+              .select('*')
+              .eq('session_id', lead.remotejID)
+              .order('created_at', { ascending: true });
+
+            if (error) {
+              console.log(`❌ Error fetching chat history for ${lead.remotejID}:`, error);
+              continue;
+            }
+
+            if (!chatHistory || chatHistory.length === 0) {
+              console.log(`⚠️ No chat history found for ${lead.remotejID}`);
+              continue;
+            }
+
+            // Analyze message patterns to determine followup2 effectiveness
+            // Followup2 is typically sent when the lead doesn't respond to followup1
+            // So we look for a gap in conversation followed by new messages
+            
+            let hasMessagesAfterFollowup2 = false;
+            let messagesAfterFollowup2 = 0;
+            
+            if (chatHistory.length >= 4) {
+              // Look for patterns that suggest followup2 was sent and got a response
+              // Pattern: initial messages -> gap -> followup2 -> response
+              
+              // Check if there are messages in the second half of the conversation
+              const midPoint = Math.floor(chatHistory.length / 2);
+              const laterMessages = chatHistory.slice(midPoint);
+              
+              // If there are significant messages in the later part, followup2 was likely effective
+              if (laterMessages.length >= 2) {
+                hasMessagesAfterFollowup2 = true;
+                messagesAfterFollowup2 = laterMessages.length;
+              }
+            } else if (chatHistory.length >= 2) {
+              // For shorter conversations, if there are at least 2 messages, consider it effective
+              hasMessagesAfterFollowup2 = true;
+              messagesAfterFollowup2 = chatHistory.length - 1;
+            }
+            
+            if (hasMessagesAfterFollowup2) {
+              effectiveFollowup2Count++;
+            }
+
+            followup2Analysis.push({
+              remotejID: lead.remotejID,
+              totalMessages: chatHistory.length,
+              messagesAfterFollowup2: messagesAfterFollowup2.length,
+              effective: hasMessagesAfterFollowup2
+            });
+
+            console.log(`📝 Lead ${lead.remotejID}:`, {
+              totalMessages: chatHistory.length,
+              messagesAfterFollowup2: messagesAfterFollowup2.length,
+              effective: hasMessagesAfterFollowup2
+            });
+
+          } catch (error) {
+            console.log(`💥 Error processing lead ${lead.remotejID}:`, error);
+          }
+        }
+
+        // Calculate followup1 effectiveness (simplified - based on conversion)
+        const followup1Only = data.filter(item => item.followup1 && !item.followup2);
+        const followup1Converted = followup1Only.filter(item => item.encerrado).length;
+        const followup1Effectiveness = followup1Only.length > 0 ? (followup1Converted / followup1Only.length) * 100 : 0;
+
+        // Calculate followup2 effectiveness based on messages after followup2
+        const followup2Effectiveness = followup2Leads.length > 0 ? (effectiveFollowup2Count / followup2Leads.length) * 100 : 0;
+
+        console.log('🎯 Followup effectiveness calculation result:', {
+          followup1Only: followup1Only.length,
+          followup1Converted,
+          followup1Effectiveness: Math.round(followup1Effectiveness),
+          followup2Leads: followup2Leads.length,
+          effectiveFollowup2Count,
+          followup2Effectiveness: Math.round(followup2Effectiveness),
+          followup2Analysis
+        });
+
+        return {
+          followup1: Math.round(followup1Effectiveness),
+          followup2: Math.round(followup2Effectiveness)
+        };
+
+      } catch (error) {
+        console.error('💥 Error calculating followup effectiveness:', error);
+        return { followup1: 0, followup2: 0 };
+      }
+    };
+
     const avgMessagesPerLead = await calculateAvgMessagesPerLead();
 
     // Peak activity hours - calculate from real chat history
@@ -299,22 +412,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
     };
 
     // Follow-up effectiveness with new logic
-    const followup1Only = data.filter(item => item.followup1 && !item.followup2);
-    const followup2Only = data.filter(item => item.followup2 && !item.followup1);
-    const bothFollowups = data.filter(item => item.followup1 && item.followup2);
-    
-    // Followup1 effectiveness: only count leads that converted with followup1 only
-    const followup1Converted = followup1Only.filter(item => item.encerrado).length;
-    const followup1Effectiveness = followup1Only.length > 0 ? (followup1Converted / followup1Only.length) * 100 : 0;
-    
-    // Followup2 effectiveness: count all leads that converted with followup2 (including those with both)
-    const followup2Converted = data.filter(item => item.followup2 && item.encerrado).length;
-    const followup2Effectiveness = data.filter(item => item.followup2).length > 0 ? (followup2Converted / data.filter(item => item.followup2).length) * 100 : 0;
-
-    const followupEffectiveness = {
-      followup1: followup1Effectiveness,
-      followup2: followup2Effectiveness
-    };
+    const followupEffectiveness = await calculateFollowupEffectiveness();
 
     setInsights({
       avgResponseTime: finalAvgResponseTime,
