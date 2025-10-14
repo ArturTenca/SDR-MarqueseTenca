@@ -84,11 +84,32 @@ export const MessagesViewer = ({ data, loading }: MessagesViewerProps) => {
             // Check content patterns that might indicate bot messages
             else if (messageData.content && (
               messageData.content.includes('Olá!') ||
+              messageData.content.includes('Olá novamente') ||
               messageData.content.includes('Como posso ajudar') ||
+              messageData.content.includes('Como posso assisti-lo') ||
+              messageData.content.includes('Como posso assisti-la') ||
+              messageData.content.includes('Como posso te ajudar') ||
+              messageData.content.includes('Estou aqui para ajudar') ||
               messageData.content.includes('Obrigado') ||
-              messageData.content.includes('Até logo')
+              messageData.content.includes('Obrigada') ||
+              messageData.content.includes('Até logo') ||
+              messageData.content.includes('Tenha um ótimo dia') ||
+              messageData.content.includes('Fico à disposição') ||
+              messageData.content.includes('Preciso de mais informações') ||
+              messageData.content.includes('Vou verificar') ||
+              messageData.content.includes('Deixe-me ajudar') ||
+              messageData.content.includes('Posso ajudar') ||
+              messageData.content.includes('Em que posso ajudar') ||
+              messageData.content.includes('Qual sua dúvida') ||
+              messageData.content.includes('Como posso ser útil') ||
+              messageData.content.includes('Bom dia') ||
+              messageData.content.includes('Boa tarde') ||
+              messageData.content.includes('Boa noite') ||
+              messageData.content.includes('Seja bem-vindo') ||
+              messageData.content.includes('Seja bem-vinda')
             )) {
               role = 'assistant';
+              console.log(`🤖 Identified as assistant by content pattern: "${messageData.content}"`);
             }
           }
           

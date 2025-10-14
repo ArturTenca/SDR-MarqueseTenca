@@ -153,9 +153,9 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         return acc + timeDiff;
       }, 0) / data.length) : 0;
 
-    // Conversion rate
-    const converted = data.filter(item => item.encerrado).length;
-    const conversionRate = (converted / data.length) * 100;
+      // Conversion rate
+      const converted = data.filter(item => item.encerrado).length;
+      const conversionRate = (converted / data.length) * 100;
 
     // Calculate average messages per lead from real chat histories
     const calculateAvgMessagesPerLead = async () => {
@@ -182,8 +182,8 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         const messageCounts = allHistories.reduce((acc: any, history) => {
           const sessionId = history.session_id;
           acc[sessionId] = (acc[sessionId] || 0) + 1;
-          return acc;
-        }, {});
+        return acc;
+      }, {});
 
         // Calculate average
         const sessionIds = Object.keys(messageCounts);
@@ -266,8 +266,8 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         // Get top 3 peak hours
         const peakHours = Object.entries(hourlyActivity)
           .sort(([,a], [,b]) => b - a)
-          .slice(0, 3)
-          .map(([hour]) => parseInt(hour));
+        .slice(0, 3)
+        .map(([hour]) => parseInt(hour));
 
         console.log('🎯 Peak activity hours calculation result:', {
           totalMessages: chatHistories.length,
@@ -414,16 +414,16 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
     // Follow-up effectiveness with new logic
     const followupEffectiveness = await calculateFollowupEffectiveness();
 
-    setInsights({
+      setInsights({
       avgResponseTime: finalAvgResponseTime,
-      conversionRate,
-      avgMessagesPerLead,
-      peakActivityHours,
-      topKeywords,
-      sentimentAnalysis,
-      followupEffectiveness
-    });
-  };
+        conversionRate,
+        avgMessagesPerLead,
+        peakActivityHours,
+        topKeywords,
+        sentimentAnalysis,
+        followupEffectiveness
+      });
+    };
 
   const fetchConversationHistory = async (remotejID: string) => {
     setLoadingHistory(true);
@@ -475,11 +475,32 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
             // Check content patterns that might indicate bot messages
             else if (messageData.content && (
               messageData.content.includes('Olá!') ||
+              messageData.content.includes('Olá novamente') ||
               messageData.content.includes('Como posso ajudar') ||
+              messageData.content.includes('Como posso assisti-lo') ||
+              messageData.content.includes('Como posso assisti-la') ||
+              messageData.content.includes('Como posso te ajudar') ||
+              messageData.content.includes('Estou aqui para ajudar') ||
               messageData.content.includes('Obrigado') ||
-              messageData.content.includes('Até logo')
+              messageData.content.includes('Obrigada') ||
+              messageData.content.includes('Até logo') ||
+              messageData.content.includes('Tenha um ótimo dia') ||
+              messageData.content.includes('Fico à disposição') ||
+              messageData.content.includes('Preciso de mais informações') ||
+              messageData.content.includes('Vou verificar') ||
+              messageData.content.includes('Deixe-me ajudar') ||
+              messageData.content.includes('Posso ajudar') ||
+              messageData.content.includes('Em que posso ajudar') ||
+              messageData.content.includes('Qual sua dúvida') ||
+              messageData.content.includes('Como posso ser útil') ||
+              messageData.content.includes('Bom dia') ||
+              messageData.content.includes('Boa tarde') ||
+              messageData.content.includes('Boa noite') ||
+              messageData.content.includes('Seja bem-vindo') ||
+              messageData.content.includes('Seja bem-vinda')
             )) {
               role = 'assistant';
+              console.log(`🤖 Identified as assistant by content pattern: "${messageData.content}"`);
             }
           }
           
@@ -661,13 +682,13 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                   <div key={index} className="flex items-center justify-between">
                     <span className="text-sm">{hour.toString().padStart(2, '0')}:00</span>
                     <Badge variant="outline">Pico {index + 1}</Badge>
-                  </div>
+              </div>
                 ))
               ) : (
                 <div className="text-center py-4 text-muted-foreground">
                   <p className="text-sm">Dados de horários de pico não disponíveis</p>
                   <p className="text-xs mt-1">Os dados serão exibidos quando houver atividade suficiente</p>
-                </div>
+              </div>
               )}
             </div>
           </CardContent>
