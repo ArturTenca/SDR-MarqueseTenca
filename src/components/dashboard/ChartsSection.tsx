@@ -35,8 +35,8 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
 
   // Process data for daily messages chart
   const dailyMessages = data.reduce((acc: any, item) => {
-    if (!item.ultimaAtividade) return acc;
-    const date = format(parseISO(item.ultimaAtividade), "dd/MM", { locale: ptBR });
+    if (!item.created_at) return acc;
+    const date = format(parseISO(item.created_at), "dd/MM", { locale: ptBR });
     acc[date] = (acc[date] || 0) + 1;
     return acc;
   }, {});
@@ -53,14 +53,14 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
 
   // Process data for conversion rate chart
   const conversionByWeek = data.reduce((acc: any, item) => {
-    if (!item.ultimaAtividade) return acc;
-    const date = parseISO(item.ultimaAtividade);
+    if (!item.created_at) return acc;
+    const date = parseISO(item.created_at);
     const week = format(date, "w/MMM", { locale: ptBR });
     if (!acc[week]) {
       acc[week] = { total: 0, converted: 0 };
     }
     acc[week].total += 1;
-    if (item.encerrado) {
+    if (item.status === 'converted' || item.status === 'meeting') {
       acc[week].converted += 1;
     }
     return acc;
@@ -83,10 +83,9 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
 
   // Process data for status pie chart
   const statusCounts = {
-    "Em Andamento": data.filter((item) => !item.encerrado).length,
-    Encerrado: data.filter((item) => item.encerrado).length,
-    "Follow-up 1": data.filter((item) => item.followup1 && !item.encerrado).length,
-    "Follow-up 2": data.filter((item) => item.followup2 && !item.encerrado).length,
+    "Em Andamento": data.filter((item) => !item.status || item.status === 'active' || item.status === 'pending').length,
+    "Convertido": data.filter((item) => item.status === 'converted' || item.status === 'meeting').length,
+    "Sem Status": data.filter((item) => !item.status).length,
   };
 
   const statusData = Object.entries(statusCounts)
@@ -95,8 +94,8 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
 
   // Process data for hourly activity chart
   const hourlyActivity = data.reduce((acc: any, item) => {
-    if (!item.ultimaAtividade) return acc;
-    const hour = new Date(item.ultimaAtividade).getHours();
+    if (!item.created_at) return acc;
+    const hour = new Date(item.created_at).getHours();
     acc[hour] = (acc[hour] || 0) + 1;
     return acc;
   }, {});
@@ -109,19 +108,19 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
 
   // Process data for weekly performance
   const weeklyPerformance = data.reduce((acc: any, item) => {
-    if (!item.ultimaAtividade) return acc;
-    const date = parseISO(item.ultimaAtividade);
+    if (!item.created_at) return acc;
+    const date = parseISO(item.created_at);
     const weekStart = startOfWeek(date, { weekStartsOn: 1 });
     const weekKey = format(weekStart, "dd/MM", { locale: ptBR });
     
     if (!acc[weekKey]) {
-      acc[weekKey] = { total: 0, converted: 0, followup1: 0, followup2: 0 };
+      acc[weekKey] = { total: 0, converted: 0, active: 0, pending: 0 };
     }
     
     acc[weekKey].total += 1;
-    if (item.encerrado) acc[weekKey].converted += 1;
-    if (item.followup1) acc[weekKey].followup1 += 1;
-    if (item.followup2) acc[weekKey].followup2 += 1;
+    if (item.status === 'converted' || item.status === 'meeting') acc[weekKey].converted += 1;
+    if (item.status === 'active') acc[weekKey].active += 1;
+    if (item.status === 'pending') acc[weekKey].pending += 1;
     
     return acc;
   }, {});
@@ -131,8 +130,8 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
       week,
       total: data.total,
       converted: data.converted,
-      followup1: data.followup1,
-      followup2: data.followup2,
+      active: data.active,
+      pending: data.pending,
       conversionRate: ((data.converted / data.total) * 100).toFixed(1),
     }))
     .sort((a, b) => {
@@ -385,8 +384,8 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
               <Legend />
               <Bar dataKey="total" name="Total" fill="hsl(var(--chart-1))" opacity={0.6} />
               <Bar dataKey="converted" name="Convertidos" fill="hsl(var(--chart-2))" />
-              <Bar dataKey="followup1" name="Follow-up 1" fill="hsl(var(--chart-3))" />
-              <Bar dataKey="followup2" name="Follow-up 2" fill="hsl(var(--chart-4))" />
+              <Bar dataKey="active" name="Ativos" fill="hsl(var(--chart-3))" />
+              <Bar dataKey="pending" name="Pendentes" fill="hsl(var(--chart-4))" />
               <Line
                 type="monotone"
                 dataKey="conversionRate"

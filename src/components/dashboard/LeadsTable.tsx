@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -27,6 +27,18 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { formatMaskedPhone } from "@/lib/phone-utils";
+import { supabase } from "@/integrations/supabase/client";
+
+interface FollowupTableData {
+  id: number;
+  created_at: string;
+  encerrado: boolean | null;
+  followup1: boolean | null;
+  followup2: boolean | null;
+  remotejid: string | null;
+  ultimaAtividade: string | null;
+  ultimaMensagem: string | null;
+}
 
 interface LeadsTableProps {
   data: FollowupData[];
@@ -38,6 +50,8 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showExportPanel, setShowExportPanel] = useState(false);
+  const [followupData, setFollowupData] = useState<FollowupTableData[]>([]);
+  const [followupLoading, setFollowupLoading] = useState(true);
   const [exportSettings, setExportSettings] = useState({
     fields: {
       id: true,
@@ -53,46 +67,104 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
   });
   const { toast } = useToast();
 
-  const getLeadNumber = (remotejID: string | null) => {
-    if (!remotejID) return "-";
-    // Remove all WhatsApp suffixes and mask the number for privacy
-    const cleanNumber = remotejID.replace(/@.*$/, "");
-    return formatMaskedPhone(cleanNumber);
+  // Buscar dados da tabela followup
+  const fetchFollowupData = async () => {
+    try {
+      setFollowupLoading(true);
+      console.log("Buscando dados da tabela followup...");
+      
+      const { data: followupData, error } = await supabase
+        .from("followup")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      console.log("Dados do followup:", followupData);
+      console.log("Erro do followup:", error);
+
+      if (error) {
+        console.error("Erro ao buscar dados do followup:", error);
+        toast({
+          title: "Erro ao carregar dados",
+          description: `Erro: ${error.message}`,
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setFollowupData(followupData || []);
+    } catch (error) {
+      console.error("Erro ao buscar dados do followup:", error);
+      toast({
+        title: "Erro ao carregar dados",
+        description: "Erro inesperado ao carregar os dados.",
+        variant: "destructive",
+      });
+    } finally {
+      setFollowupLoading(false);
+    }
   };
 
-  const getStatusBadge = (item: FollowupData) => {
+  useEffect(() => {
+    fetchFollowupData();
+  }, []);
+
+  const getLeadNumber = (remotejid: string | null) => {
+    if (!remotejid) return "-";
+    
+    // Remove @whatsapp.net and extract the phone number
+    const phoneNumber = remotejid.replace(/@.*$/, "");
+    
+    // Format Brazilian phone number: 5511999999999 -> (11) 99999-9999
+    if (phoneNumber.length >= 13 && phoneNumber.startsWith('55')) {
+      const countryCode = phoneNumber.slice(0, 2); // 55
+      const areaCode = phoneNumber.slice(2, 4);    // 11
+      const number = phoneNumber.slice(4);         // 9999999999
+      
+      // Format as (11) 99999-9999
+      if (number.length === 9) {
+        return `(${areaCode}) ${number.slice(0, 5)}-${number.slice(5)}`;
+      } else if (number.length === 8) {
+        return `(${areaCode}) ${number.slice(0, 4)}-${number.slice(4)}`;
+      }
+    }
+    
+    // If not a standard Brazilian format, return the clean number
+    return phoneNumber;
+  };
+
+  const getStatusBadge = (item: FollowupTableData) => {
     if (item.encerrado) {
-      return <Badge className="bg-green-600 text-white hover:bg-green-700 transition-colors">Encerrado</Badge>;
+      return <Badge className="bg-gray-600 text-white hover:bg-gray-700 transition-colors">Encerrado</Badge>;
     }
     if (item.followup2) {
-      return <Badge variant="outline">Follow-up 2</Badge>;
+      return <Badge className="bg-blue-600 text-white hover:bg-blue-700 transition-colors">Follow-up 2</Badge>;
     }
     if (item.followup1) {
-      return <Badge variant="outline">Follow-up 1</Badge>;
+      return <Badge className="bg-yellow-600 text-white hover:bg-yellow-700 transition-colors">Follow-up 1</Badge>;
     }
     return <Badge className="bg-accent text-accent-foreground">Em Andamento</Badge>;
   };
 
-  const filteredData = data.filter((item) => {
-    const leadNumber = getLeadNumber(item.remotejID);
+  const filteredData = followupData.filter((item) => {
+    const leadNumber = getLeadNumber(item.remotejid);
     const matchesSearch = leadNumber.toLowerCase().includes(search.toLowerCase());
     const matchesStatus =
       statusFilter === "all" ||
+      (statusFilter === "andamento" && !item.encerrado && !item.followup1 && !item.followup2) ||
       (statusFilter === "encerrado" && item.encerrado) ||
-      (statusFilter === "andamento" && !item.encerrado) ||
       (statusFilter === "followup1" && item.followup1 && !item.encerrado) ||
       (statusFilter === "followup2" && item.followup2 && !item.encerrado);
     return matchesSearch && matchesStatus;
   });
 
   const exportToCSV = () => {
-    const headers = ["ID", "Número do Lead", "Última Atividade", "Status", "Encerrado"];
+    const headers = ["ID", "Número do Lead", "Última Atividade", "Última Mensagem", "Status"];
     const csvData = filteredData.map((item) => [
       item.id,
-      getLeadNumber(item.remotejID),
+      getLeadNumber(item.remotejid),
       item.ultimaAtividade ? format(parseISO(item.ultimaAtividade), "dd/MM/yyyy HH:mm", { locale: ptBR }) : "-",
-      item.followup2 ? "Follow-up 2" : item.followup1 ? "Follow-up 1" : "Em Andamento",
-      item.encerrado ? "Sim" : "Não",
+      item.ultimaMensagem || "-",
+      item.encerrado ? "Encerrado" : item.followup2 ? "Follow-up 2" : item.followup1 ? "Follow-up 1" : "Em Andamento",
     ]);
     
     const csv = [headers, ...csvData].map((row) => row.join(",")).join("\n");
@@ -110,7 +182,7 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
   };
 
   const getFilteredDataForExport = () => {
-    let exportData = [...data];
+    let exportData = [...followupData];
 
     // Filter by time range
     if (exportSettings.timeRange !== "all") {
@@ -212,7 +284,7 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
       txtContent += `${index + 1}. `;
       
       if (exportSettings.fields.leadNumber) {
-        txtContent += `Número: ${getLeadNumber(item.remotejID)}`;
+        txtContent += `Número: ${getLeadNumber(item.remotejid)}`;
       }
       
       if (exportSettings.fields.lastActivity) {
@@ -220,7 +292,7 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
       }
       
       if (exportSettings.fields.status) {
-        const status = item.followup2 ? "Follow-up 2" : item.followup1 ? "Follow-up 1" : "Em Andamento";
+        const status = item.encerrado ? "Encerrado" : item.followup2 ? "Follow-up 2" : item.followup1 ? "Follow-up 1" : "Em Andamento";
         txtContent += ` | Status: ${status}`;
       }
       
@@ -251,7 +323,7 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
     });
   };
 
-  if (loading) {
+  if (loading || followupLoading) {
     return (
       <Card>
         <CardHeader>
@@ -270,7 +342,7 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
         <div className="flex items-center justify-between">
           <CardTitle>Tabela de Leads</CardTitle>
           <div className="flex gap-2">
-            <Button variant="outline" size="sm" onClick={onRefresh} className="transition-all duration-200 hover:scale-105 hover:shadow-md">
+            <Button variant="outline" size="sm" onClick={() => { onRefresh(); fetchFollowupData(); }} className="transition-all duration-200 hover:scale-105 hover:shadow-md">
               <RefreshCw className="h-4 w-4 mr-2" />
               Atualizar
             </Button>
@@ -330,7 +402,7 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
               ) : (
                 filteredData.map((item) => (
                   <TableRow key={item.id} className="transition-all duration-200 hover:bg-accent/10">
-                    <TableCell className="font-medium">{getLeadNumber(item.remotejID)}</TableCell>
+                    <TableCell className="font-medium">{getLeadNumber(item.remotejid)}</TableCell>
                     <TableCell>
                       {item.ultimaAtividade
                         ? format(parseISO(item.ultimaAtividade), "dd/MM/yyyy HH:mm", { locale: ptBR })

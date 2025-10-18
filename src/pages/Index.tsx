@@ -1,5 +1,4 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { DashboardHeader } from "@/components/dashboard/DashboardHeader";
 import { MetricsCards } from "@/components/dashboard/MetricsCards";
@@ -13,37 +12,21 @@ import { FollowupData } from "@/types/followup";
 const Index = () => {
   const [data, setData] = useState<FollowupData[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const navigate = useNavigate();
   const { toast } = useToast();
-
-  useEffect(() => {
-    // Add a small delay to allow localStorage to be set
-    const timer = setTimeout(() => {
-      const isAuth = localStorage.getItem('isAuthenticated');
-      const userEmail = localStorage.getItem('userEmail');
-      const tokenData = localStorage.getItem('supabase.auth.token');
-      
-      if (isAuth === 'true' && userEmail && tokenData) {
-        setIsAuthenticated(true);
-        setLoading(false);
-        return;
-      }
-      navigate("/auth");
-    }, 100);
-
-    return () => clearTimeout(timer);
-  }, [navigate]);
 
   const fetchData = async () => {
     try {
-      const { data: followupData, error } = await supabase
-        .from("followup")
+      const { data: chatsData, error } = await supabase
+        .from("chats")
         .select("*")
-        .order("ultimaAtividade", { ascending: false });
+        .order("created_at", { ascending: false });
 
-      if (error) throw error;
-      setData(followupData || []);
+      if (error) {
+        console.error('Supabase error:', error);
+        throw error;
+      }
+      
+      setData(chatsData || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
@@ -56,20 +39,15 @@ const Index = () => {
     }
   };
 
-  useEffect(() => {
-    if (isAuthenticated) {
-      fetchData();
-      
-      // Auto-refresh every 5 minutes
-      const interval = setInterval(fetchData, 5 * 60 * 1000);
-      
-      return () => clearInterval(interval);
-    }
-  }, [isAuthenticated]);
 
-  if (!isAuthenticated) {
-    return null;
-  }
+  useEffect(() => {
+    fetchData();
+    
+    // Auto-refresh every 5 minutes
+    const interval = setInterval(fetchData, 5 * 60 * 1000);
+    
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <div className="min-h-screen bg-background">
@@ -93,6 +71,7 @@ const Index = () => {
             Powered by n8n
           </div>
         </div>
+
         
         <MetricsCards data={data} loading={loading} />
         

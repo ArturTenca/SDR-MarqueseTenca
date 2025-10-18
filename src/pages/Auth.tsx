@@ -15,11 +15,16 @@ const Auth = () => {
   const { toast } = useToast();
 
   useEffect(() => {
-    // Check if user is already authenticated
-    const isAuth = localStorage.getItem('isAuthenticated');
-    if (isAuth === 'true') {
-      navigate("/");
-    }
+    // Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      console.log('Auth - Auth state change:', event, session);
+      if (event === 'SIGNED_IN' && session) {
+        console.log('Auth - User signed in, navigating to dashboard');
+        navigate("/", { replace: true });
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, [navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -38,24 +43,14 @@ const Auth = () => {
       }
 
       if (data.session) {
-        // Store authentication data
-        localStorage.setItem('isAuthenticated', 'true');
-        localStorage.setItem('userEmail', data.session.user.email);
-        localStorage.setItem('supabase.auth.token', JSON.stringify({
-          access_token: data.session.access_token,
-          refresh_token: data.session.refresh_token,
-          expires_at: data.session.expires_at,
-          user: data.session.user,
-          token_type: data.session.token_type
-        }));
-        
+        console.log('Auth - Login successful, session created:', data.session);
         toast({
           title: "Login realizado com sucesso!",
           description: "Redirecionando para o dashboard...",
         });
         
-        // Navigate immediately
-        navigate("/");
+        // Navigate immediately - Supabase handles session storage automatically
+        navigate("/", { replace: true });
       } else {
         throw new Error('Sessão não criada');
       }

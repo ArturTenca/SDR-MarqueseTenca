@@ -10,8 +10,8 @@ interface MetricsCardsProps {
 
 export const MetricsCards = ({ data, loading }: MetricsCardsProps) => {
   const totalMessages = data.length;
-  const totalMeetings = data.filter((item) => item.encerrado).length;
-  const leadsInProgress = data.filter((item) => !item.encerrado).length;
+  const totalMeetings = data.filter((item) => item.status === 'converted' || item.status === 'meeting').length;
+  const leadsInProgress = data.filter((item) => !item.status || item.status === 'active' || item.status === 'pending').length;
   const conversionRate = totalMessages > 0 ? ((totalMeetings / totalMessages) * 100).toFixed(1) : "0";
 
   const metrics = [

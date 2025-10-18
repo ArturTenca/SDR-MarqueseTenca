@@ -306,16 +306,16 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
             const { data: chatHistory, error } = await supabase
               .from('n8n_chat_histories')
               .select('*')
-              .eq('session_id', lead.remotejID)
+              .eq('session_id', lead.remotejid)
               .order('created_at', { ascending: true });
 
             if (error) {
-              console.log(`❌ Error fetching chat history for ${lead.remotejID}:`, error);
+              console.log(`❌ Error fetching chat history for ${lead.remotejid}:`, error);
               continue;
             }
 
             if (!chatHistory || chatHistory.length === 0) {
-              console.log(`⚠️ No chat history found for ${lead.remotejID}`);
+              console.log(`⚠️ No chat history found for ${lead.remotejid}`);
               continue;
             }
 
@@ -350,20 +350,20 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
             }
 
             followup2Analysis.push({
-              remotejID: lead.remotejID,
+              remotejid: lead.remotejid,
               totalMessages: chatHistory.length,
               messagesAfterFollowup2: messagesAfterFollowup2.length,
               effective: hasMessagesAfterFollowup2
             });
 
-            console.log(`📝 Lead ${lead.remotejID}:`, {
+            console.log(`📝 Lead ${lead.remotejid}:`, {
               totalMessages: chatHistory.length,
               messagesAfterFollowup2: messagesAfterFollowup2.length,
               effective: hasMessagesAfterFollowup2
             });
 
           } catch (error) {
-            console.log(`💥 Error processing lead ${lead.remotejID}:`, error);
+            console.log(`💥 Error processing lead ${lead.remotejid}:`, error);
           }
         }
 
@@ -428,6 +428,8 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
   const fetchConversationHistory = async (remotejID: string) => {
     setLoadingHistory(true);
     try {
+      console.log("🔍 Buscando histórico para:", remotejID);
+      
       // Fetch real conversation history from n8n_chat_histories table
       const { data: historyData, error } = await supabase
         .from('n8n_chat_histories')
@@ -435,8 +437,18 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         .eq('session_id', remotejID)
         .order('id', { ascending: true });
 
+      console.log("🔍 Dados do histórico:", historyData);
+      console.log("🔍 Erro do histórico:", error);
+
       if (error) {
-        throw error;
+        console.error("Erro ao buscar histórico:", error);
+        toast({
+          title: "Erro ao carregar histórico",
+          description: `Erro: ${error.message}`,
+          variant: "destructive",
+        });
+        setConversationHistory(null);
+        return;
       }
 
       if (historyData && historyData.length > 0) {
@@ -526,12 +538,14 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
         });
       }
     } catch (error) {
+      console.error("Erro ao buscar histórico:", error);
       // Error fetching conversation history
       toast({
         title: "Erro ao carregar histórico",
-        description: "Não foi possível carregar o histórico da conversa.",
+        description: `Erro: ${error instanceof Error ? error.message : 'Erro desconhecido'}`,
         variant: "destructive",
       });
+      setConversationHistory(null);
     } finally {
       setLoadingHistory(false);
     }
@@ -541,7 +555,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
   const saveAnalysisData = async (insights: ConversationInsights) => {
     try {
       const analysisData = {
-        remotejID: 'global_analysis',
+        remotejid: 'global_analysis',
         avg_response_time_hours: insights.avgResponseTime / 60, // Convert minutes to hours for storage
         conversion_rate: insights.conversionRate,
         avg_messages_per_lead: insights.avgMessagesPerLead,
@@ -555,7 +569,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
       const { error } = await supabase
         .from('conversation_analysis')
         .upsert(analysisData, { 
-          onConflict: 'remotejID',
+          onConflict: 'remotejid',
           ignoreDuplicates: false 
         });
 
@@ -735,7 +749,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                     <div className="flex items-center gap-2">
                       <MessageSquare className="h-4 w-4 text-primary" />
                       <span className="text-sm font-medium truncate">
-                        {lead.remotejID}
+                        {lead.remotejid}
                       </span>
                     </div>
                     <Badge variant={lead.encerrado ? "default" : "secondary"}>
@@ -771,8 +785,8 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                         className="w-full"
                         onClick={() => {
                           setSelectedLead(lead);
-                          if (lead.remotejID) {
-                            fetchConversationHistory(lead.remotejID);
+                          if (lead.remotejid) {
+                            fetchConversationHistory(lead.remotejid);
                           }
                         }}
                       >
@@ -781,7 +795,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl">
                       <DialogHeader>
-                        <DialogTitle>Análise Completa - {lead.remotejID}</DialogTitle>
+                        <DialogTitle>Análise Completa - {lead.remotejid}</DialogTitle>
                       </DialogHeader>
                       <ScrollArea className="h-[500px] pr-4">
                         <div className="space-y-4">
