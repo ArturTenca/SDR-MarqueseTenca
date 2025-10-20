@@ -793,81 +793,86 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                         Ver conversa completa
                       </Button>
                     </DialogTrigger>
-                    <DialogContent className="max-w-4xl">
-                      <DialogHeader>
+                    <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
+                      <DialogHeader className="flex-shrink-0">
                         <DialogTitle>Análise Completa - {lead.remotejid}</DialogTitle>
                       </DialogHeader>
-                      <ScrollArea className="h-[500px] pr-4">
-                        <div className="space-y-4">
-                          {/* Conversation History */}
-                          <div className="space-y-3">
-                            <h4 className="font-medium">Histórico da Conversa</h4>
-                            {loadingHistory ? (
-                              <div className="space-y-2">
-                                {[1, 2, 3].map((i) => (
-                                  <Skeleton key={i} className="h-16 w-full" />
-                                ))}
-                              </div>
-                            ) : conversationHistory?.messages.length === 0 ? (
-                              <div className="text-center py-8 text-muted-foreground">
-                                <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                                <p>Nenhum histórico de conversa encontrado para este lead.</p>
-                                <p className="text-sm mt-2">Os dados serão exibidos quando as conversas estiverem disponíveis no n8n.</p>
-                              </div>
-                            ) : (
-                              <div className="space-y-2">
-                                {conversationHistory?.messages.map((message) => (
-                                  <div
-                                    key={message.id}
-                                    className={`p-3 rounded-lg ${
-                                      message.role === 'user'
-                                        ? 'bg-muted ml-8'
-                                        : 'bg-primary/10 mr-8'
-                                    }`}
-                                  >
-                                    <div className="flex items-center gap-2 mb-1">
-                                      <Badge variant="outline" className="text-xs">
-                                        {message.role === 'user' ? 'Cliente' : 'Assistente'}
-                                      </Badge>
-                                      <span className="text-xs text-muted-foreground">
-                                        {format(parseISO(message.timestamp), "dd/MM HH:mm", {
-                                          locale: ptBR,
-                                        })}
-                                      </span>
+                      
+                      {/* Conversation History - Scrollable */}
+                      <div className="flex-1 overflow-hidden">
+                        <ScrollArea className="h-full pr-4">
+                          <div className="space-y-4">
+                            <div className="space-y-3">
+                              <h4 className="font-medium">Histórico da Conversa</h4>
+                              {loadingHistory ? (
+                                <div className="space-y-2">
+                                  {[1, 2, 3].map((i) => (
+                                    <Skeleton key={i} className="h-16 w-full" />
+                                  ))}
+                                </div>
+                              ) : conversationHistory?.messages.length === 0 ? (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  <MessageSquare className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                  <p>Nenhum histórico de conversa encontrado para este lead.</p>
+                                  <p className="text-sm mt-2">Os dados serão exibidos quando as conversas estiverem disponíveis no n8n.</p>
+                                </div>
+                              ) : (
+                                <div className="space-y-2">
+                                  {conversationHistory?.messages.map((message) => (
+                                    <div
+                                      key={message.id}
+                                      className={`p-3 rounded-lg ${
+                                        message.role === 'user'
+                                          ? 'bg-muted ml-8'
+                                          : 'bg-primary/10 mr-8'
+                                      }`}
+                                    >
+                                      <div className="flex items-center gap-2 mb-1">
+                                        <Badge variant="outline" className="text-xs">
+                                          {message.role === 'user' ? 'Cliente' : 'Assistente'}
+                                        </Badge>
+                                        <span className="text-xs text-muted-foreground">
+                                          {format(parseISO(message.timestamp), "dd/MM HH:mm", {
+                                            locale: ptBR,
+                                          })}
+                                        </span>
+                                      </div>
+                                      <p className="text-sm">{message.content}</p>
                                     </div>
-                                    <p className="text-sm">{message.content}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+                                  ))}
+                                </div>
+                              )}
+                            </div>
                           </div>
+                        </ScrollArea>
+                      </div>
 
-                          {/* Lead Information */}
-                          <div className="space-y-2">
-                            <h4 className="font-medium">Informações do Lead</h4>
-                            <div className="grid grid-cols-2 gap-2 text-sm">
-                              <div>
-                                <span className="text-muted-foreground">ID:</span>{" "}
-                                <span className="font-medium">{lead.id}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Status:</span>{" "}
-                                <span className="font-medium">
-                                  {lead.encerrado ? "Encerrado" : "Em Andamento"}
-                                </span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Follow-up 1:</span>{" "}
-                                <span className="font-medium">{lead.followup1 ? "Sim" : "Não"}</span>
-                              </div>
-                              <div>
-                                <span className="text-muted-foreground">Follow-up 2:</span>{" "}
-                                <span className="font-medium">{lead.followup2 ? "Sim" : "Não"}</span>
-                              </div>
+                      {/* Lead Information - Fixed at bottom */}
+                      <div className="flex-shrink-0 p-4 bg-muted/50 rounded-lg mt-4">
+                        <div className="space-y-2">
+                          <h4 className="font-medium text-sm">Informações do Lead</h4>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <div>
+                              <span className="text-muted-foreground">ID:</span>{" "}
+                              <span className="font-medium">{lead.id}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Status:</span>{" "}
+                              <span className="font-medium">
+                                {lead.encerrado ? "Encerrado" : "Em Andamento"}
+                              </span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Follow-up 1:</span>{" "}
+                              <span className="font-medium">{lead.followup1 ? "Sim" : "Não"}</span>
+                            </div>
+                            <div>
+                              <span className="text-muted-foreground">Follow-up 2:</span>{" "}
+                              <span className="font-medium">{lead.followup2 ? "Sim" : "Não"}</span>
                             </div>
                           </div>
                         </div>
-                      </ScrollArea>
+                      </div>
                     </DialogContent>
                   </Dialog>
                 </CardContent>

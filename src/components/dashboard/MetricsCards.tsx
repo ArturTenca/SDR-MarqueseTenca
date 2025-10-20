@@ -10,9 +10,9 @@ interface MetricsCardsProps {
 
 export const MetricsCards = ({ data, loading }: MetricsCardsProps) => {
   const totalMessages = data.length;
-  const totalMeetings = data.filter((item) => item.status === 'converted' || item.status === 'meeting').length;
-  const leadsInProgress = data.filter((item) => !item.status || item.status === 'active' || item.status === 'pending').length;
-  const conversionRate = totalMessages > 0 ? ((totalMeetings / totalMessages) * 100).toFixed(1) : "0";
+  const totalEncerrados = data.filter((item) => item.encerrado === true).length;
+  const leadsInProgress = data.filter((item) => !item.encerrado && !item.followup1 && !item.followup2).length;
+  const conversionRate = totalMessages > 0 ? ((totalEncerrados / totalMessages) * 100).toFixed(1) : "0";
 
   const metrics = [
     {
@@ -23,8 +23,8 @@ export const MetricsCards = ({ data, loading }: MetricsCardsProps) => {
       bgColor: "bg-primary/10",
     },
     {
-      title: "Reuniões Marcadas",
-      value: totalMeetings,
+      title: "Leads Encerrados",
+      value: totalEncerrados,
       icon: Calendar,
       color: "text-success",
       bgColor: "bg-success/10",

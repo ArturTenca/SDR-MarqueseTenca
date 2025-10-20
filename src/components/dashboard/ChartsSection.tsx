@@ -55,12 +55,17 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
   const conversionByWeek = data.reduce((acc: any, item) => {
     if (!item.created_at) return acc;
     const date = parseISO(item.created_at);
-    const week = format(date, "w/MMM", { locale: ptBR });
+    
+    // Get the week number and year for proper week calculation
+    const year = date.getFullYear();
+    const weekNumber = Math.ceil((date.getTime() - new Date(year, 0, 1).getTime()) / (7 * 24 * 60 * 60 * 1000));
+    const week = `Semana ${weekNumber}/${year}`;
+    
     if (!acc[week]) {
       acc[week] = { total: 0, converted: 0 };
     }
     acc[week].total += 1;
-    if (item.status === 'converted' || item.status === 'meeting') {
+    if (item.encerrado === true) {
       acc[week].converted += 1;
     }
     return acc;
@@ -74,18 +79,32 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
       total: data.total,
     }))
     .sort((a, b) => {
-      // Sort by week chronologically
-      const dateA = new Date(a.week.split('/').reverse().join('-'));
-      const dateB = new Date(b.week.split('/').reverse().join('-'));
-      return dateA.getTime() - dateB.getTime();
+      // Sort by week chronologically - extract week number and year
+      const getWeekInfo = (weekStr: string) => {
+        const match = weekStr.match(/Semana (\d+)\/(\d+)/);
+        if (match) {
+          return { week: parseInt(match[1]), year: parseInt(match[2]) };
+        }
+        return { week: 0, year: 0 };
+      };
+      
+      const weekA = getWeekInfo(a.week);
+      const weekB = getWeekInfo(b.week);
+      
+      // Sort by year first, then by week number
+      if (weekA.year !== weekB.year) {
+        return weekA.year - weekB.year;
+      }
+      return weekA.week - weekB.week;
     })
     .slice(-8); // Last 8 weeks
 
-  // Process data for status pie chart
+  // Process data for status pie chart using followup table fields
   const statusCounts = {
-    "Em Andamento": data.filter((item) => !item.status || item.status === 'active' || item.status === 'pending').length,
-    "Convertido": data.filter((item) => item.status === 'converted' || item.status === 'meeting').length,
-    "Sem Status": data.filter((item) => !item.status).length,
+    "Encerrado": data.filter((item) => item.encerrado === true).length,
+    "Follow-up 1": data.filter((item) => item.followup1 === true && !item.followup2 && !item.encerrado).length,
+    "Follow-up 2": data.filter((item) => item.followup2 === true && !item.encerrado).length,
+    "Em Andamento": data.filter((item) => !item.encerrado && !item.followup1 && !item.followup2).length,
   };
 
   const statusData = Object.entries(statusCounts)
@@ -114,13 +133,13 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
     const weekKey = format(weekStart, "dd/MM", { locale: ptBR });
     
     if (!acc[weekKey]) {
-      acc[weekKey] = { total: 0, converted: 0, active: 0, pending: 0 };
+      acc[weekKey] = { total: 0, converted: 0, followup1: 0, followup2: 0 };
     }
     
     acc[weekKey].total += 1;
-    if (item.status === 'converted' || item.status === 'meeting') acc[weekKey].converted += 1;
-    if (item.status === 'active') acc[weekKey].active += 1;
-    if (item.status === 'pending') acc[weekKey].pending += 1;
+    if (item.encerrado === true) acc[weekKey].converted += 1;
+    if (item.followup1 === true && !item.followup2 && !item.encerrado) acc[weekKey].followup1 += 1;
+    if (item.followup2 === true && !item.encerrado) acc[weekKey].followup2 += 1;
     
     return acc;
   }, {});
@@ -130,9 +149,9 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
       week,
       total: data.total,
       converted: data.converted,
-      active: data.active,
-      pending: data.pending,
-      conversionRate: ((data.converted / data.total) * 100).toFixed(1),
+      followup1: data.followup1,
+      followup2: data.followup2,
+      conversionRate: data.total > 0 ? parseFloat(((data.converted / data.total) * 100).toFixed(1)) : 0,
     }))
     .sort((a, b) => {
       const dateA = new Date(a.week.split('/').reverse().join('-'));
@@ -141,9 +160,30 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
     })
     .slice(-selectedWeeklyPeriod);
 
+  // Ensure at least one data point for the conversion rate line
+  if (weeklyData.length === 0) {
+    weeklyData.push({
+      week: "Sem dados",
+      total: 0,
+      converted: 0,
+      followup1: 0,
+      followup2: 0,
+      conversionRate: 0,
+    });
+  }
 
 
-  const COLORS = ["hsl(var(--chart-1))", "hsl(var(--chart-2))", "hsl(var(--chart-3))", "hsl(var(--chart-4))"];
+
+  const COLORS = ["#22c55e", "#3b82f6", "#1e40af", "#f59e0b"]; // Verde, Azul, Azul Escuro, Amarelo
+
+  // Calculate dynamic Y-axis domain for charts
+  const maxWeeklyValue = Math.max(
+    ...weeklyData.map(d => Math.max(d.total, d.converted, d.followup1, d.followup2))
+  );
+  const maxConversionRate = Math.max(
+    ...weeklyData.map(d => d.conversionRate)
+  );
+  const maxHourlyValue = Math.max(...hourlyData.map(d => d.messages));
 
   if (loading) {
     return (
@@ -241,7 +281,11 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
             >
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="week" className="text-xs" />
-              <YAxis className="text-xs" unit="%" />
+              <YAxis 
+                className="text-xs" 
+                unit="%" 
+                domain={[0, Math.max(maxConversionRate * 1.1, 10)]}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
@@ -316,7 +360,10 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
             <AreaChart data={hourlyData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="hour" className="text-xs" />
-              <YAxis className="text-xs" />
+              <YAxis 
+                className="text-xs" 
+                domain={[0, Math.max(maxHourlyValue * 1.1, 5)]}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
@@ -372,7 +419,10 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
             <ComposedChart data={weeklyData}>
               <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
               <XAxis dataKey="week" className="text-xs" />
-              <YAxis className="text-xs" />
+              <YAxis 
+                className="text-xs" 
+                domain={[0, Math.max(maxWeeklyValue * 1.1, 10)]}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: "hsl(var(--card))",
@@ -383,9 +433,9 @@ export const ChartsSection = ({ data, loading }: ChartsSectionProps) => {
               />
               <Legend />
               <Bar dataKey="total" name="Total" fill="hsl(var(--chart-1))" opacity={0.6} />
-              <Bar dataKey="converted" name="Convertidos" fill="hsl(var(--chart-2))" />
-              <Bar dataKey="active" name="Ativos" fill="hsl(var(--chart-3))" />
-              <Bar dataKey="pending" name="Pendentes" fill="hsl(var(--chart-4))" />
+              <Bar dataKey="converted" name="Encerrados" fill="hsl(var(--chart-2))" />
+              <Bar dataKey="followup1" name="Follow-up 1" fill="hsl(var(--chart-3))" />
+              <Bar dataKey="followup2" name="Follow-up 2" fill="hsl(var(--chart-4))" />
               <Line
                 type="monotone"
                 dataKey="conversionRate"

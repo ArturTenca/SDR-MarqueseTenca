@@ -134,7 +134,7 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
 
   const getStatusBadge = (item: FollowupTableData) => {
     if (item.encerrado) {
-      return <Badge className="bg-gray-600 text-white hover:bg-gray-700 transition-colors">Encerrado</Badge>;
+      return <Badge className="bg-green-600 text-white hover:bg-green-700 transition-colors">Encerrado</Badge>;
     }
     if (item.followup2) {
       return <Badge className="bg-blue-600 text-white hover:bg-blue-700 transition-colors">Follow-up 2</Badge>;

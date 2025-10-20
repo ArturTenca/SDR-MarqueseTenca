@@ -16,8 +16,8 @@ const Index = () => {
 
   const fetchData = async () => {
     try {
-      const { data: chatsData, error } = await supabase
-        .from("chats")
+      const { data: followupData, error } = await supabase
+        .from("followup")
         .select("*")
         .order("created_at", { ascending: false });
 
@@ -26,7 +26,7 @@ const Index = () => {
         throw error;
       }
       
-      setData(chatsData || []);
+      setData(followupData || []);
     } catch (error) {
       console.error("Error fetching data:", error);
       toast({
