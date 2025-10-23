@@ -13,7 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { FollowupData } from "@/types/followup";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Search, Download, RefreshCw, FileText, Calendar, Settings } from "lucide-react";
+import { Search, Download, RefreshCw, FileText, Calendar, Settings, ArrowUpRight } from "lucide-react";
 import { format, parseISO, subDays, subWeeks, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -44,9 +44,10 @@ interface LeadsTableProps {
   data: FollowupData[];
   loading: boolean;
   onRefresh: () => void;
+  onLeadClick?: (remotejid: string) => void;
 }
 
-export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
+export const LeadsTable = ({ data, loading, onRefresh, onLeadClick }: LeadsTableProps) => {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showExportPanel, setShowExportPanel] = useState(false);
@@ -401,7 +402,15 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
                 </TableRow>
               ) : (
                 filteredData.map((item) => (
-                  <TableRow key={item.id} className="transition-all duration-200 hover:bg-accent/10">
+                  <TableRow 
+                    key={item.id} 
+                    className="transition-all duration-200 hover:bg-accent/10 cursor-pointer group"
+                    onClick={() => {
+                      if (item.remotejid && onLeadClick) {
+                        onLeadClick(item.remotejid);
+                      }
+                    }}
+                  >
                     <TableCell className="font-medium">{getLeadNumber(item.remotejid)}</TableCell>
                     <TableCell>
                       {item.ultimaAtividade
@@ -411,7 +420,15 @@ export const LeadsTable = ({ data, loading, onRefresh }: LeadsTableProps) => {
                     <TableCell className="max-w-xs truncate">
                       {item.ultimaMensagem || "-"}
                     </TableCell>
-                    <TableCell>{getStatusBadge(item)}</TableCell>
+                    <TableCell>
+                      <div className="flex items-center justify-between">
+                        {getStatusBadge(item)}
+                        <ArrowUpRight 
+                          className="h-4 w-4 text-muted-foreground transition-all duration-300 ease-in-out group-hover:rotate-0 group-hover:text-primary group-hover:scale-110 ml-2" 
+                          style={{ transform: 'rotate(45deg)' }}
+                        />
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))
               )}

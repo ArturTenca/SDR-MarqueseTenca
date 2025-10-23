@@ -12,6 +12,8 @@ import { FollowupData } from "@/types/followup";
 const Index = () => {
   const [data, setData] = useState<FollowupData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState("overview");
+  const [selectedRemotejid, setSelectedRemotejid] = useState<string | null>(null);
   const { toast } = useToast();
 
   const fetchData = async () => {
@@ -49,6 +51,11 @@ const Index = () => {
     return () => clearInterval(interval);
   }, []);
 
+  const handleLeadClick = (remotejid: string) => {
+    setSelectedRemotejid(remotejid);
+    setActiveTab("analysis");
+  };
+
   return (
     <div className="min-h-screen bg-background">
       <DashboardHeader />
@@ -75,7 +82,7 @@ const Index = () => {
         
         <MetricsCards data={data} loading={loading} />
         
-        <Tabs defaultValue="overview" className="space-y-6">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
           <TabsList className="bg-card">
             <TabsTrigger value="overview">Visão Geral</TabsTrigger>
             <TabsTrigger value="leads">Leads</TabsTrigger>
@@ -87,11 +94,11 @@ const Index = () => {
           </TabsContent>
           
           <TabsContent value="leads">
-            <LeadsTable data={data} loading={loading} onRefresh={fetchData} />
+            <LeadsTable data={data} loading={loading} onRefresh={fetchData} onLeadClick={handleLeadClick} />
           </TabsContent>
           
           <TabsContent value="analysis">
-            <ConversationAnalysis data={data} loading={loading} />
+            <ConversationAnalysis data={data} loading={loading} selectedRemotejid={selectedRemotejid} />
           </TabsContent>
         </Tabs>
       </main>

@@ -29,15 +29,29 @@ import { useToast } from "@/hooks/use-toast";
 interface ConversationAnalysisProps {
   data: FollowupData[];
   loading: boolean;
+  selectedRemotejid?: string | null;
 }
 
-export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProps) => {
+export const ConversationAnalysis = ({ data, loading, selectedRemotejid }: ConversationAnalysisProps) => {
   const [insights, setInsights] = useState<ConversationInsights | null>(null);
   const [selectedLead, setSelectedLead] = useState<FollowupData | null>(null);
   const [conversationHistory, setConversationHistory] = useState<ConversationHistory | null>(null);
   const [loadingHistory, setLoadingHistory] = useState(false);
   const [analysisData, setAnalysisData] = useState<ConversationAnalysisData | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const { toast } = useToast();
+
+  // Auto-load conversation when selectedRemotejid changes
+  useEffect(() => {
+    if (selectedRemotejid) {
+      const lead = data.find(item => item.remotejid === selectedRemotejid);
+      if (lead) {
+        setSelectedLead(lead);
+        fetchConversationHistory(selectedRemotejid);
+        setIsDialogOpen(true); // Abre o modal automaticamente
+      }
+    }
+  }, [selectedRemotejid, data]);
 
   // Fetch conversation analysis data from Supabase
   useEffect(() => {
@@ -777,7 +791,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                       <Badge variant="outline" className="text-xs">F2</Badge>
                     )}
                   </div>
-                  <Dialog>
+                  <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
                     <DialogTrigger asChild>
                       <Button 
                         variant="outline" 
@@ -795,7 +809,7 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                     </DialogTrigger>
                     <DialogContent className="max-w-4xl h-[80vh] flex flex-col">
                       <DialogHeader className="flex-shrink-0">
-                        <DialogTitle>Análise Completa - {lead.remotejid}</DialogTitle>
+                        <DialogTitle>Análise Completa - {selectedLead?.remotejid || lead.remotejid}</DialogTitle>
                       </DialogHeader>
                       
                       {/* Conversation History - Scrollable */}
@@ -854,21 +868,21 @@ export const ConversationAnalysis = ({ data, loading }: ConversationAnalysisProp
                           <div className="grid grid-cols-2 gap-2 text-sm">
                             <div>
                               <span className="text-muted-foreground">ID:</span>{" "}
-                              <span className="font-medium">{lead.id}</span>
+                              <span className="font-medium">{selectedLead?.id || lead.id}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Status:</span>{" "}
                               <span className="font-medium">
-                                {lead.encerrado ? "Encerrado" : "Em Andamento"}
+                                {(selectedLead?.encerrado ?? lead.encerrado) ? "Encerrado" : "Em Andamento"}
                               </span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Follow-up 1:</span>{" "}
-                              <span className="font-medium">{lead.followup1 ? "Sim" : "Não"}</span>
+                              <span className="font-medium">{(selectedLead?.followup1 ?? lead.followup1) ? "Sim" : "Não"}</span>
                             </div>
                             <div>
                               <span className="text-muted-foreground">Follow-up 2:</span>{" "}
-                              <span className="font-medium">{lead.followup2 ? "Sim" : "Não"}</span>
+                              <span className="font-medium">{(selectedLead?.followup2 ?? lead.followup2) ? "Sim" : "Não"}</span>
                             </div>
                           </div>
                         </div>
