@@ -57,3 +57,6 @@ CREATE TRIGGER trigger_update_process_analysis_updated_at
 -- Add comment to table
 COMMENT ON TABLE public.process_analysis IS 'Tabela para armazenar análises e sumários de processos/documentos gerados por automação';
 
+
+
+

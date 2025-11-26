@@ -6,6 +6,7 @@ import { ChartsSection } from "@/components/dashboard/ChartsSection";
 import { LeadsTable } from "@/components/dashboard/LeadsTable";
 import { ConversationAnalysis } from "@/components/dashboard/ConversationAnalysis";
 import { ProcessAnalysisSection } from "@/components/dashboard/ProcessAnalysis";
+import { BlockedNumbersSection } from "@/components/dashboard/BlockedNumbers";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { FollowupData } from "@/types/followup";
@@ -89,6 +90,7 @@ const Index = () => {
             <TabsTrigger value="leads">Leads</TabsTrigger>
             <TabsTrigger value="analysis">Análise de Conversas</TabsTrigger>
             <TabsTrigger value="processes">Análise Processos</TabsTrigger>
+            <TabsTrigger value="blocked">Números Bloqueados</TabsTrigger>
           </TabsList>
           
           <TabsContent value="overview" className="space-y-6">
@@ -105,6 +107,10 @@ const Index = () => {
           
           <TabsContent value="processes">
             <ProcessAnalysisSection loading={loading} />
+          </TabsContent>
+          
+          <TabsContent value="blocked">
+            <BlockedNumbersSection />
           </TabsContent>
         </Tabs>
       </main>

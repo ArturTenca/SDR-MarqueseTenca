@@ -32,3 +32,6 @@ CREATE POLICY "Authenticated users can update sumario"
 --   FOR SELECT
 --   USING (true);
 
+
+
+
