@@ -320,6 +320,9 @@ export const BlockedNumbersSection = () => {
                 Adicionar
               </Button>
             </div>
+            <p className="text-xs text-muted-foreground">
+              ⚠️ O número deve sempre incluir DDD e DDI
+            </p>
           </div>
         </div>
 
